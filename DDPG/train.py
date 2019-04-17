@@ -10,6 +10,7 @@ except ModuleNotFoundError:
 
 import numpy as np
 import matplotlib.pyplot as plt
+# import roboschool
 import gym
 import yaml
 
@@ -23,8 +24,6 @@ print("DDPG starting...")
 
 with open('config.yaml', 'r') as stream:
     config = yaml.load(stream)
-
-print(config)
 
 parser = argparse.ArgumentParser(description='Run DDPG on ' + config['GAME'])
 parser.add_argument('--gpu', action='store_true', help='Use GPU')
@@ -92,10 +91,10 @@ try:
 
             noise = np.random.normal(scale=config['EPSILON'], size=ACTION_SIZE)
             action += torch.tensor([noise], dtype=torch.float, device=device)
-            action = torch.clamp(action, LOW_BOUND, HIGH_BOUND)
+            action = torch.clamp(action, LOW_BOUND, HIGH_BOUND) 
 
             # Perform an action
-            next_state, reward, done, _ = env.step(action)
+            next_state, reward, done, _ = env.step(action.numpy()[0])
             next_state = torch.tensor([next_state], dtype=torch.float, device=device)
             if done:
                 next_state = None

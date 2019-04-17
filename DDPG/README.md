@@ -18,6 +18,14 @@ Options :
 
 The models will be saved in a folder in ```runs/```.
 
+## Visualizing the training
+
+You can use Tensorboard to visualize the evolution of the training in real time :
+
+1. Open a new terminal
+2. Run ```tensorboard --logdir=<absolute-path>/runs/```.
+3. In your browser navigate to localhost:6006/
+
 ## Testing the agent
 
 To test the performance of a trained agent, run ```python3 test.py -f runs/YOUR_FOLDER```.

@@ -1,11 +1,15 @@
 import argparse
+# import roboschool
 import gym
 import torch
+import yaml
 
-from config import Config
 from model import Model
 
-parser = argparse.ArgumentParser(description='Test DDPG on ' + Config.GAME)
+with open('config.yaml', 'r') as stream:
+    config = yaml.load(stream)
+
+parser = argparse.ArgumentParser(description='Test DDPG on ' + config['GAME'])
 parser.add_argument('--render', action='store_true', help='Display the tests', dest="render")
 parser.add_argument('-n', '--nb_tests', default=10, type=int, help="Number of evaluation to perform.", dest="nb_tests")
 parser.add_argument('-f', '--folder', default='runs/', type=str, help="Folder where the models are saved", dest="folder")
@@ -21,7 +25,7 @@ print("\033[91m\033[1mDevice : ", device.upper(), "\033[0m")
 device = torch.device(device)
 
 # Create gym environment
-env = gym.make(Config.GAME)
+env = gym.make(config['GAME'])
 
 LOW_BOUND = int(env.action_space.low[0])
 HIGH_BOUND = int(env.action_space.high[0])
@@ -42,16 +46,16 @@ for ep in range(args.nb_tests):
     state = torch.tensor([state], dtype=torch.float, device=device)
     done = False
     step = 0
-    while not done and step < Config.MAX_STEPS:
+    while not done and step < config['MAX_STEPS']:
 
         action = model.actor(state).detach()
-        state, r, done, _ = env.step(action)
+        state, r, done, _ = env.step(action.numpy()[0])
         if args.render:
             env.render()
         state = torch.tensor([state], dtype=torch.float, device=device)
         rewards[ep] += r
         step += 1
-        
+
 env.close()
 
 print("Average reward : ", sum(rewards) / args.nb_tests)
