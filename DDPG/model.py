@@ -25,10 +25,16 @@ class Critic:
                 param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
 
+    def save(self, folder):
+        torch.save(self.nn.state_dict(), folder+'/models/critic.pth')
+        torch.save(self.target.state_dict(), folder+'/models/critic_target.pth')
+
+    def load(self, folder):
+        self.nn.load_state_dict(torch.load(folder+'/models/critic.pth', map_location='cpu'))
+        self.target.load_state_dict(torch.load(folder+'/models/critic_target.pth', map_location='cpu'))
+
     def __call__(self, state_action):
         return self.nn(state_action)
-
-    def save()
 
 
 class Actor:
@@ -47,15 +53,24 @@ class Actor:
                 param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
 
+    def save(self, folder):
+        torch.save(self.nn.state_dict(), folder+'/models/actor.pth')
+        torch.save(self.target.state_dict(), folder+'/models/actor_target.pth')
+
+    def load(self, folder):
+        self.nn.load_state_dict(torch.load(folder+'/models/actor.pth', map_location='cpu'))
+        self.target.load_state_dict(torch.load(folder+'/models/actor_target.pth', map_location='cpu'))
+
     def __call__(self, state):
         return self.nn(state)
 
 
 class Model:
 
-    def __init__(self, device, state_size, action_size, low_bound, high_bound):
+    def __init__(self, device, state_size, action_size, low_bound, high_bound, folder):
         self.device = device
         self.memory = ReplayMemory(Config.MEMORY_CAPACITY)
+        self.folder = folder
 
         self.critic = Critic(state_size, action_size, device)
         self.actor = Actor(state_size, action_size, low_bound, high_bound, device)
@@ -125,24 +140,11 @@ class Model:
 
         return losses
 
-    def evaluate(self, n_ep=10, render=False):
 
-        rewards = [0]*n_ep
+    def save(self):
+        self.actor.save(self.folder)
+        self.critic.save(self.folder)
 
-        for ep in range(n_ep):
-
-            state = self.eval_env.reset()
-            state = torch.tensor([state], dtype=torch.float, device=self.device)
-            done = False
-            step = 0
-            while not done and step < Config.MAX_STEPS:
-
-                action = self.actor_star(state).detach()
-                state, r, done, _ = self.eval_env.step(action)
-                if render:
-                    self.eval_env.render()
-                state = torch.tensor([state], dtype=torch.float, device=self.device)
-                rewards[ep] += r
-                step += 1
-
-        return sum(rewards) / n_ep
+    def load(self):
+        self.actor.load(self.folder)
+        self.critic.load(self.folder)

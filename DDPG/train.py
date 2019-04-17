@@ -22,13 +22,7 @@ print("DDPG starting...")
 
 parser = argparse.ArgumentParser(description='Run DDPG on ' + Config.GAME)
 parser.add_argument('--gpu', action='store_true', help='Use GPU')
-parser.add_argument('--eval', action='store_true', help='Evaluation of a policy')
 args = parser.parse_args()
-
-if args.eval:
-    model.load()
-    model.evaluate(render=True)
-    sys.exit(0)
 
 # Create folder and writer to write tensorboard values
 if not os.path.exists('runs'):
@@ -36,6 +30,8 @@ if not os.path.exists('runs'):
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
 expe_name = f'runs/{current_time}_{Config.GAME[:4]}'
 writer = SummaryWriter(expe_name)
+if not os.path.exists(expe_name+'/models/'):
+    os.mkdir(expe_name+'/models/')
 
 # Choose device cpu or cuda if a gpu is available
 if args.gpu and torch.cuda.is_available():
@@ -55,20 +51,13 @@ for k, v in Config.__dict__.items():
 print("Creating environment...")
 env = gym.make(Config.GAME)
 
-print(env.action_space)
-
 LOW_BOUND = int(env.action_space.low[0])
 HIGH_BOUND = int(env.action_space.high[0])
 STATE_SIZE = env.observation_space.shape[0]
 ACTION_SIZE = env.action_space.shape[0]
 
 print("Creating neural networks and optimizers...")
-model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND)
-
-if args.eval:
-    model.load()
-    model.evaluate(render=True)
-    sys.exit(0)
+model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, expe_name)
 
 losses_names = ['actor', 'critic']
 episode_reward = []
@@ -124,6 +113,9 @@ try:
 
 except KeyboardInterrupt:
     pass
+
+model.save()
+print("\033[91m\033[1mModel saved in", expe_name, "\033[0m")
 
 time_execution = time.time() - time_beginning
 
