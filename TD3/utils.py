@@ -1,10 +1,9 @@
-# Shared classes and parameters for the benchmark on several gym games
+"""Shared classes and parameters for the benchmark on several gym games"""
 import random
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from collections import namedtuple
 
 
 # One class for parameters
@@ -22,7 +21,6 @@ class Config:
     MAX_EPISODES = 1000
     MAX_STEPS = 200
     EPSILON = 0.001
-
 
 
 class ReplayMemory:
@@ -80,13 +78,8 @@ class DQN_actor(nn.Module):
         x = F.relu(self.hidden3(x))
         x = self.output(x)
         x = (torch.sigmoid(x) * (self.high_bound - self.low_bound)) + self.low_bound
-        # if x.size(0) == 1:
-        #     return x[0]
-        # else:
         return x.view(x.size(0), -1)
 
-
-# Several functions for DDPG
 
 # Soft target update function
 def update_targets(target, original, tau):
