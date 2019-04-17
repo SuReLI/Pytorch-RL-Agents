@@ -11,16 +11,22 @@ except ModuleNotFoundError:
 import numpy as np
 import matplotlib.pyplot as plt
 import gym
+import yaml
 
 import torch
 from tensorboardX import SummaryWriter
 
-from config import Config
+# from config import Config
 from model import Model
 
 print("DDPG starting...")
 
-parser = argparse.ArgumentParser(description='Run DDPG on ' + Config.GAME)
+with open('config.yaml', 'r') as stream:
+    config = yaml.load(stream)
+
+print(config)
+
+parser = argparse.ArgumentParser(description='Run DDPG on ' + config['GAME'])
 parser.add_argument('--gpu', action='store_true', help='Use GPU')
 args = parser.parse_args()
 
@@ -28,10 +34,17 @@ args = parser.parse_args()
 if not os.path.exists('runs'):
     os.mkdir('runs')
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-expe_name = f'runs/{current_time}_{Config.GAME[:4]}'
+expe_name = 'runs/'+current_time+'_'+config['GAME'][:4]
 writer = SummaryWriter(expe_name)
 if not os.path.exists(expe_name+'/models/'):
     os.mkdir(expe_name+'/models/')
+
+# Write optional info about the experiment to tensorboard
+for k, v in config.items():
+    writer.add_text('Config', str(k) + ' : ' + str(v), 0)
+
+with open(expe_name+'/config.yaml', 'w') as stream:
+    yaml.dump(config, stream)
 
 # Choose device cpu or cuda if a gpu is available
 if args.gpu and torch.cuda.is_available():
@@ -42,14 +55,10 @@ print("\033[91m\033[1mDevice : ", device.upper(), "\033[0m")
 writer.add_text('Device', device, 0)
 device = torch.device(device)
 
-# Write optional info about the experience to tensorboard
-for k, v in Config.__dict__.items():
-    if not k.startswith("__"):
-        writer.add_text('Config', str(k) + ' : ' + str(v), 0)
 
 # Create gym environment
 print("Creating environment...")
-env = gym.make(Config.GAME)
+env = gym.make(config['GAME'])
 
 LOW_BOUND = int(env.action_space.low[0])
 HIGH_BOUND = int(env.action_space.high[0])
@@ -69,7 +78,7 @@ try:
     print("Starting training...")
     eval_reward = []
     nb_episodes_done = 0
-    for i_episode in trange(Config.MAX_EPISODES):
+    for i_episode in trange(config['MAX_EPISODES']):
 
         state = env.reset()
         state = torch.tensor([state], dtype=torch.float, device=device)
@@ -77,11 +86,11 @@ try:
         step = 0
         current_reward = 0
 
-        while not done and step < Config.MAX_STEPS:
+        while not done and step < config['MAX_STEPS']:
 
             action = model.actor(state).detach()
 
-            noise = np.random.normal(scale=Config.EPSILON, size=ACTION_SIZE)
+            noise = np.random.normal(scale=config['EPSILON'], size=ACTION_SIZE)
             action += torch.tensor([noise], dtype=torch.float, device=device)
             action = torch.clamp(action, LOW_BOUND, HIGH_BOUND)
 
