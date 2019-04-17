@@ -4,3 +4,4 @@ __pycache__/
 results.png
 results/
 models/
+runs/
