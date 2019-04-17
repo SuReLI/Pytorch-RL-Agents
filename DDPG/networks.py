@@ -17,7 +17,7 @@ class CriticNetwork(nn.Module):
         x = F.relu(self.hidden1(x))
         x = F.relu(self.hidden2(x))
         x = F.relu(self.hidden3(x))
-        return self.output(x.view(x.size(0), -1))
+        return self.output(x)
 
 
 class ActorNetwork(nn.Module):
@@ -38,4 +38,4 @@ class ActorNetwork(nn.Module):
         x = F.relu(self.hidden3(x))
         x = self.output(x)
         x = (torch.sigmoid(x) * (self.high_bound - self.low_bound)) + self.low_bound
-        return x.view(x.size(0), -1)
+        return x
