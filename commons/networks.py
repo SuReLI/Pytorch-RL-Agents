@@ -4,6 +4,24 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class DQN(nn.Module):
+
+    def __init__(self, input_size, action_size):
+        super().__init__()
+        self.hidden1 = nn.Linear(input_size, 16)
+        self.hidden2 = nn.Linear(16, 16)
+        self.hidden3 = nn.Linear(16, 16)
+        self.output = nn.Linear(16, action_size)
+
+    def forward(self, x):
+
+        x = F.relu(self.hidden1(x))
+        x = F.relu(self.hidden2(x))
+        x = F.relu(self.hidden3(x))
+        return self.output(x.view(x.size(0), -1))
+
+
+
 class CriticNetwork(nn.Module):
     def __init__(self, input_size, hidden_layers_size):
         super().__init__()
@@ -103,3 +121,6 @@ class Actor:
 
     def __call__(self, state):
         return self.nn(state)
+
+
+
