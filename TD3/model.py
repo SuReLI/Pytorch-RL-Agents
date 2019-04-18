@@ -1,79 +1,11 @@
+import sys
+sys.path.extend(["../commons/"])
+
 import torch
-import torch.optim as optim
 import torch.nn.functional as F
 
 from utils import ReplayMemory, update_targets
-from networks import ActorNetwork, CriticNetwork
-
-
-class Critic:
-    def __init__(self, state_size, action_size, device, config):
-        self.nn = CriticNetwork(state_size + action_size).to(device)
-        self.target_nn = CriticNetwork(state_size + action_size).to(device)
-        self.target_nn.load_state_dict(self.nn.state_dict())
-
-        self.optimizer = optim.Adam(self.nn.parameters(), lr=config["LEARNING_RATE_CRITIC"])
-
-    def update(self, loss, grad_clipping=True):
-        self.optimizer.zero_grad()
-        loss.backward()
-        if grad_clipping:
-            for param in self.nn.parameters():
-                param.grad.data.clamp_(-1, 1)
-        self.optimizer.step()
-
-    def save(self, folder):
-        torch.save(self.nn.state_dict(), folder+'/models/critic.pth')
-        torch.save(self.target_nn.state_dict(), folder+'/models/critic_target.pth')
-
-    def load(self, folder):
-        self.nn.load_state_dict(torch.load(folder+'/models/critic.pth', map_location='cpu'))
-        self.target_nn.load_state_dict(torch.load(folder+'/models/critic_target.pth', map_location='cpu'))
-
-    def target(self, state, action):
-        state_action = torch.cat([state, action], -1)
-        return self.target_nn(state_action)
-
-    def __call__(self, state, action):
-        state_action = torch.cat([state, action], -1)
-        return self.nn(state_action)
-
-
-class Actor:
-    def __init__(self, state_size, action_size, low_bound, high_bound, device, config):
-        self.device = device
-
-        self.nn = ActorNetwork(state_size, action_size, low_bound, high_bound).to(device)
-        self.target_nn = ActorNetwork(state_size, action_size, low_bound, high_bound).to(device)
-        self.target_nn.load_state_dict(self.nn.state_dict())
-
-        self.optimizer = optim.Adam(self.nn.parameters(), lr=config["LEARNING_RATE_ACTOR"])
-
-    def update(self, loss, grad_clipping=True):
-        self.optimizer.zero_grad()
-        loss.backward()
-        if grad_clipping:
-            for param in self.nn.parameters():
-                param.grad.data.clamp_(-1, 1)
-        self.optimizer.step()
-
-    def save(self, folder):
-        torch.save(self.nn.state_dict(), folder+'/models/actor.pth')
-        torch.save(self.target_nn.state_dict(), folder+'/models/actor_target.pth')
-
-    def load(self, folder):
-        self.nn.load_state_dict(torch.load(folder+'/models/actor.pth', map_location='cpu'))
-        self.target_nn.load_state_dict(torch.load(folder+'/models/actor_target.pth', map_location='cpu'))
-
-    def select_action(self, state):
-        state = torch.FloatTensor(state).to(self.device)
-        return self.nn(state).cpu().detach().numpy()
-
-    def target(self, state):
-        return self.target_nn(state)
-
-    def __call__(self, state):
-        return self.nn(state)
+from networks import Actor, Critic
 
 
 class Model:
@@ -102,7 +34,9 @@ class Model:
     def optimize(self):
 
         if len(self.memory) < self.config["BATCH_SIZE"]:
-            return
+            return None, None
+
+        self.update_step += 1
 
         transitions = self.memory.sample(self.config["BATCH_SIZE"])
         batch = list(zip(*transitions))
@@ -140,7 +74,7 @@ class Model:
         self.critic_B.update(loss_critic_B, grad_clipping=False)
 
         # Optimize actor every 2 steps
-        if self.update_step % 2 == 1:
+        if self.update_step % 2 == 0:
             loss_actor = -self.critic_A(states, self.actor(states)).mean()
 
             self.actor.update(loss_actor, grad_clipping=False)
@@ -150,7 +84,10 @@ class Model:
             update_targets(self.critic_A.target_nn, self.critic_A.nn, self.config["TAU"])
             update_targets(self.critic_B.target_nn, self.critic_B.nn, self.config["TAU"])
 
-        self.update_step += 1
+            return loss_actor.item(), loss_critic_A.item()
+
+        else:
+            return None, loss_critic_A.item()
 
     def evaluate(self, n_ep=10, render=False):
 
