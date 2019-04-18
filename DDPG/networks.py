@@ -18,7 +18,7 @@ class CriticNetwork(nn.Module):
         for layer in self.hiddens:
             x = F.relu(layer(x))
 
-        return self.output(x.view(x.size(0), -1))
+        return self.output(x)
 
 
 class ActorNetwork(nn.Module):
@@ -41,4 +41,4 @@ class ActorNetwork(nn.Module):
 
         x = self.output(x)
         x = (torch.sigmoid(x) * (self.high_bound - self.low_bound)) + self.low_bound
-        return x.view(x.size(0), -1)
+        return x

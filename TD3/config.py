@@ -5,7 +5,7 @@ class Config:
     GAME = "Pendulum-v0"
 
     MEMORY_CAPACITY = 1000000
-    BATCH_SIZE = 8
+    BATCH_SIZE = 100
     GAMMA = 0.99
     LEARNING_RATE_CRITIC = 0.001
     LEARNING_RATE_ACTOR = 0.001
