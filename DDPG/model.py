@@ -11,7 +11,7 @@ class Critic:
         self.nn = CriticNetwork(state_size + action_size, config['HIDDEN_LAYERS']).to(device)
         self.target_nn = CriticNetwork(state_size + action_size, config['HIDDEN_LAYERS']).to(device)
         self.target.load_state_dict(self.nn.state_dict())
-        
+
         self.optimizer = optim.Adam(self.nn.parameters(), lr=config['LEARNING_RATE_CRITIC'])
 
     def update(self, loss, grad_clipping=True):
@@ -85,13 +85,13 @@ class Model:
         self.device = device
         self.memory = ReplayMemory(self.config["MEMORY_CAPACITY"])
 
-        self.critic = Critic(state_size, action_size, device, self.config)
-        self.actor = Actor(state_size, action_size, low_bound, high_bound, device, self.config)
-
         self.state_size = state_size
         self.action_size = action_size
         self.low_bound = low_bound
         self.high_bound = high_bound
+
+        self.critic = Critic(state_size, action_size, device, self.config)
+        self.actor = Actor(state_size, action_size, low_bound, high_bound, device, self.config)
 
     def select_action(self, state):
         return self.actor.select_action(state)
