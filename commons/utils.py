@@ -1,3 +1,5 @@
+import os
+import datetime
 import random
 
 
@@ -22,8 +24,20 @@ class ReplayMemory:
 
 
 def update_targets(target, original, tau):
-    """Weighted average update of the target network and original network
-        Inputs: target network and original network"""
 
     for targetParam, orgParam in zip(target.parameters(), original.parameters()):
         targetParam.data.copy_((1 - tau)*targetParam.data + tau*orgParam.data)
+
+
+def convert_name(title):
+    date = title.split('_', 1)[1]
+    return datetime.datetime.strptime(date, '%Y-%m-%d_%H-%M-%S')
+
+
+def get_latest_dir(folder):
+    dirs = os.listdir(folder)
+    dirs.sort(key=convert_name)
+    if len(dirs) > 0:
+        return dirs[-1]
+    else:
+        return ''

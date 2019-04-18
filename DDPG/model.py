@@ -2,11 +2,10 @@ import sys
 sys.path.extend(["../commons/"])
 
 import torch
-import torch.optim as optim
 import torch.nn.functional as F
 
 from utils import ReplayMemory, update_targets
-from networks import Critic, Actor
+from networks import Actor, Critic
 
 
 class Model:
