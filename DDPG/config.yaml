@@ -6,14 +6,17 @@ GAME : "BipedalWalker-v2"
 # GAME : "RoboschoolHalfCheetah-v0"
 # GAME : "MountainCarContinuous-v0"
 
+HIDDEN_LAYERS : [400,300]  # Size of the NN
+# HIDDEN_LAYERS : [8,8,8]
+
 MEMORY_CAPACITY : 1000000
 BATCH_SIZE : 64
 GAMMA : 0.99
 LEARNING_RATE_CRITIC : 0.001
 LEARNING_RATE_ACTOR : 0.001
-TAU : 0.001
+TAU : 0.005
 
-EPSILON : 0.001  # Exploration noise
+EPSILON : 0.1  # Exploration noise
 
-MAX_EPISODES : 1500
+MAX_EPISODES : 1000
 MAX_STEPS : 200  # Max steps per episode

@@ -17,7 +17,6 @@ import yaml
 import torch
 from tensorboardX import SummaryWriter
 
-# from config import Config
 from model import Model
 
 print("DDPG starting...")
