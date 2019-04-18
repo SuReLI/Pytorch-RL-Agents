@@ -2,7 +2,6 @@
 # GAME : "Pendulum-v0"
 # GAME : "LunarLanderContinuous-v2"
 GAME : "BipedalWalker-v2"
-# GAME : "Acrobot-v1"
 # GAME : "RoboschoolHalfCheetah-v0"
 # GAME : "MountainCarContinuous-v0"
 
@@ -18,7 +17,5 @@ TAU : 0.005
 
 EPSILON : 0.1  # Exploration noise
 
-MAX_EPISODES : 1000
-MAX_STEPS : 200  # Max steps per episode
-MAX_EPISODES : 1000
-MAX_STEPS : 200
+MAX_EPISODES : 10000
+MAX_STEPS : 10000  # Max steps per episode

@@ -1,4 +1,5 @@
 import torch
+import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -32,12 +33,12 @@ class ActorNetwork(nn.Module):
             x = F.relu(layer(x))
         x = self.output(x)
         return (torch.sigmoid(x) * (self.high_bound - self.low_bound)) + self.low_bound
-
+        
 
 class Critic:
     def __init__(self, state_size, action_size, device, config):
-        self.nn = CriticNetwork(state_size + action_size).to(device)
-        self.target_nn = CriticNetwork(state_size + action_size).to(device)
+        self.nn = CriticNetwork(state_size + action_size, config['HIDDEN_LAYERS']).to(device)
+        self.target_nn = CriticNetwork(state_size + action_size, config['HIDDEN_LAYERS']).to(device)
         self.target_nn.load_state_dict(self.nn.state_dict())
 
         self.optimizer = optim.Adam(self.nn.parameters(), lr=config["LEARNING_RATE_CRITIC"])
@@ -71,8 +72,8 @@ class Actor:
     def __init__(self, state_size, action_size, low_bound, high_bound, device, config):
         self.device = device
 
-        self.nn = ActorNetwork(state_size, action_size, low_bound, high_bound).to(device)
-        self.target_nn = ActorNetwork(state_size, action_size, low_bound, high_bound).to(device)
+        self.nn = ActorNetwork(state_size, action_size, low_bound, high_bound, config['HIDDEN_LAYERS']).to(device)
+        self.target_nn = ActorNetwork(state_size, action_size, low_bound, high_bound, config['HIDDEN_LAYERS']).to(device)
         self.target_nn.load_state_dict(self.nn.state_dict())
 
         self.optimizer = optim.Adam(self.nn.parameters(), lr=config["LEARNING_RATE_ACTOR"])

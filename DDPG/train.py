@@ -98,6 +98,10 @@ def train():
 
                 actor_loss, critic_loss = model.optimize()
 
+                # print(step)
+                # for param in model.critic.nn.parameters():
+                #     print(param)
+
                 step += 1
                 nb_total_steps += 1
 
