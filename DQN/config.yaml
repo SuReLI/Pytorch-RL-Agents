@@ -1,17 +1,43 @@
+GAME : 'CartPole-v1'
 
-GAME : "Acrobot-v1"
-# GAME : "CartPole-v1"
-# GAME : "MountainCar-v0"
+BATCH_SIZE: 64
+GAMMA: 0.99
+MEMORY_SIZE: 10000
+TARGET_UPDATE: 4
+TAU: 0.5
+LEARNING_RATE: 0.001
+GAMMA_LR: 0.9
+STEP_LR: 2000
+MAX_TIMESTEPS: 200
+MAX_EPISODES: 1000
+STATE_SAVE_PROBA: 0.5
+
+# Exploration settings
+
+EPSILON_START: 0.2
+EPSILON_END: 0.05
+EPSILON_DECAY: 500
+
+# Parameters
+DISPLAY : True
+GUI  : True
+LOAD : False
 
 
-MEMORY_CAPACITY : 1000000
-BATCH_SIZE : 64
-GAMMA : 0.99
-LEARNING_RATE_CRITIC : 0.001
-LEARNING_RATE_ACTOR : 0.001
-TAU : 0.005
+###########################################################################
+# Algorithm hyper-parameters
 
-EPSILON : 0.1  # Exploration noise
+N_STEP : 1
+GAMMA_N : GAMMA ** N_STEP
 
-MAX_EPISODES : 10000
-MAX_STEPS : 10000  # Max steps per episode
+GRAD_CLAMPING : False
+
+###########################################################################
+# Display frequencies
+
+EP_REWARD_FREQ : 100
+PLOT_FREQ      : 200
+RENDER_FREQ    : 500
+SAVE_FREQ      : 0
+
+RESULTS_PATH : 'results/'

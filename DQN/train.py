@@ -15,6 +15,7 @@ import torch
 from tensorboardX import SummaryWriter
 
 from model import Model
+from Agent import Agent
 
 
 print("DQN starting...")
@@ -55,11 +56,7 @@ print("Creating environment...")
 env = gym.make(config["GAME"])
 
 STATE_SIZE = env.observation_space.shape[0]
-ACTION_SIZE = env.action_space.shape[0]
-
-print(STATE_SIZE)
-print(ACTION_SIZE)
-
+ACTION_SIZE = env.action_space.n
 
 def train():
 
@@ -75,41 +72,37 @@ def train():
         for episode in trange(config["MAX_EPISODES"]):
 
             state = env.reset()
+            state = torch.tensor([state], dtype=torch.float, device=device)
             done = False
             step = 0
             current_reward = 0
 
             while not done and step < config["MAX_STEPS"]:
 
-                action = model.select_action(state)
-
-                noise = np.random.normal(scale=config["EPSILON"], size=ACTION_SIZE)
-                action = np.clip(action+noise, LOW_BOUND, HIGH_BOUND)
+                action = model.select_action(state, episode)
 
                 # Perform an action
-                next_state, reward, done, _ = env.step(action)
-                current_reward += reward
+                next_state, reward, done, _ = env.step(action.item())
+                next_state = torch.tensor([next_state], dtype=torch.float, device=device)
+                reward = torch.tensor([reward], device=device)
+                current_reward += reward.item()
 
                 if not done and step == config["MAX_STEPS"]:
                     done = True
 
                 # Save transition into memory
-                model.memory.push(state, action, reward, next_state, 1-int(done))
+                model.memory.push(state, action, reward, next_state)#, 1-int(done))
                 state = next_state
 
-                actor_loss, critic_loss = model.optimize()
-
-                # print(step)
-                # for param in model.critic.nn.parameters():
-                #     print(param)
+                loss = model.optimize(nb_episodes_done, step)
 
                 step += 1
                 nb_total_steps += 1
 
-            writer.add_scalar('episode_rewards/actor', current_reward, episode)
-            if actor_loss is not None:
-                writer.add_scalar('loss/actor_loss', actor_loss, episode)
-                writer.add_scalar('loss/critic_loss', critic_loss, episode)
+            print('episode : ', episode, ', current_reward : ', current_reward, ', loss : ', loss)
+            writer.add_scalar('stats/reward_per_episode', current_reward, episode)
+            if loss is not None:
+                writer.add_scalar('stats/loss', loss, episode)
 
             nb_episodes_done += 1
 
@@ -137,10 +130,4 @@ def train():
 
 
 if __name__ == '__main__':
-    # train()
-    agent = Agent(device, config['GAME'])
-
-    print("Training !")
-    agent.train()
-
-    agent.display()
+    train()

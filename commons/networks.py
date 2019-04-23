@@ -18,7 +18,7 @@ class DQN(nn.Module):
         x = F.relu(self.hidden1(x))
         x = F.relu(self.hidden2(x))
         x = F.relu(self.hidden3(x))
-        return self.output(x.view(x.size(0), -1))
+        return self.output(x)#.view(x.size(0), -1))
 
 
 
