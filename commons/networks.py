@@ -21,7 +21,6 @@ class DQN(nn.Module):
         return self.output(x)#.view(x.size(0), -1))
 
 
-
 class CriticNetwork(nn.Module):
     def __init__(self, input_size, hidden_layers_size):
         super().__init__()
@@ -121,6 +120,3 @@ class Actor:
 
     def __call__(self, state):
         return self.nn(state)
-
-
-
