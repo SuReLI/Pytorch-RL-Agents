@@ -1,5 +1,5 @@
 import sys
-sys.path.extend(['../commons/'])
+sys.path.extend(["../commons/"])
 
 import argparse
 import yaml
@@ -14,7 +14,7 @@ with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 default_dir = 'runs/' + get_latest_dir('runs/')
-parser = argparse.ArgumentParser(description='Test TD3 on ' + config["GAME"])
+parser = argparse.ArgumentParser(description='Test DDPG on ' + config["GAME"])
 parser.add_argument('--render', action='store_true', dest="render",
                     help='Display the tests')
 parser.add_argument('-n', '--nb_tests', default=10, type=int, dest="nb_tests",
@@ -35,7 +35,7 @@ STATE_SIZE = env.observation_space.shape[0]
 ACTION_SIZE = env.action_space.shape[0]
 
 # Creating neural networks and loading models
-model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, args.folder, config)
+model = Model(device, None, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, args.folder, config)
 model.load()
 
 # START EVALUATION

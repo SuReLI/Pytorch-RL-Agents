@@ -1,20 +1,25 @@
+import sys
+sys.path.extend(['../commons/'])
+
 import argparse
 import yaml
 import gym
 import torch
 
 from model import Model
+from utils import get_latest_dir
 
 
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
+default_dir = 'runs/' + get_latest_dir('runs/')
 parser = argparse.ArgumentParser(description='Test DDPG on ' + config["GAME"])
 parser.add_argument('--render', action='store_true', dest="render",
                     help='Display the tests')
 parser.add_argument('-n', '--nb_tests', default=10, type=int, dest="nb_tests",
                     help="Number of evaluation to perform.")
-parser.add_argument('-f', '--folder', default='runs/', type=str, dest="folder",
+parser.add_argument('-f', '--folder', default=default_dir, type=str, dest="folder",
                     help="Folder where the models are saved")
 args = parser.parse_args()
 

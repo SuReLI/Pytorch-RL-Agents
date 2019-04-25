@@ -72,6 +72,10 @@ def update_targets(target, original, tau):
         targetParam.data.copy_((1 - tau)*targetParam.data + tau*orgParam.data)
 
 
+def str_to_list(string):
+    return list(map(float, string[1:-1].split(', ')))
+
+
 def convert_name(title):
     date = title.split('_', 1)[1]
     return datetime.datetime.strptime(date, '%Y-%m-%d_%H-%M-%S')
