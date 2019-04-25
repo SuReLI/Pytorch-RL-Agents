@@ -16,8 +16,7 @@ from tensorboardX import SummaryWriter
 
 from model import Model
 
-import random
-from utils import *
+import utils
 
 print("DQN starting...")
 
@@ -30,16 +29,16 @@ args = parser.parse_args()
 
 # Create folder and writer to write tensorboard values
 current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-expe_name = f'runs/{current_time}_{config["GAME"][:4]}'
-writer = SummaryWriter(expe_name)
-if not os.path.exists(expe_name+'/models/'):
-    os.mkdir(expe_name+'/models/')
+folder = f'runs/{current_time}_{config["GAME"][:4]}'
+writer = SummaryWriter(folder)
+if not os.path.exists(folder+'/models/'):
+    os.mkdir(folder+'/models/')
 
 # Write optional info about the experiment to tensorboard
 for k, v in config.items():
     writer.add_text('Config',  str(k) + ' : ' + str(v), 0)
 
-with open(expe_name+'/config.yaml', 'w') as file:
+with open(folder+'/config.yaml', 'w') as file:
     yaml.dump(config, file)
 
 # Choose device cpu or cuda if a gpu is available
@@ -59,88 +58,91 @@ env = gym.make(config["GAME"])
 STATE_SIZE = env.observation_space.shape[0]
 ACTION_SIZE = env.action_space.n
 
-def intermediate_reward(reward, next_state):
-    if config['GAME'] == 'Acrobot-v1' and next_state[0][0] != 0:
-        return torch.tensor([reward + 1 - next_state[0][0]], device=device)
+def train():
 
-    elif config['GAME'] == 'MountainCar-v0' and next_state[0][0] < 0.5:
-        return torch.tensor([abs(next_state[0][0]+0.4)], device=device)
-    elif config['GAME'] == 'MountainCar-v0' and next_state[0][0] >= 0.5:
-        return torch.tensor([100.0], device=device)
+    print("Creating neural networks and optimizers...")
+    model = Model(device, STATE_SIZE, ACTION_SIZE, folder, config)
 
-    else:
-        return torch.tensor([reward], device=device)
+    nb_total_steps = 0
+    time_beginning = time.time()
+
+    try:
+        print("Starting training...")
+        nb_episodes_done = 0
+        steps_per_sec = []
+
+        for episode in range(config['MAX_EPISODES']) :
+            time_beginning_ep = time.time()
+
+            # Initialize the environment and state
+            state = env.reset()
+            state = torch.tensor([state], dtype=torch.float, device=model.device)
+            episode_reward = 0
+            done = False
+            step = 0
+
+            while step <= config['MAX_TIMESTEPS'] and not done:
+
+                # Select and perform an action
+                action = model.select_action(state, episode)
+                next_state, reward, done, _ = env.step(action.item())
+                next_state = torch.tensor([next_state], dtype=torch.float, device=model.device)
+                reward = model.intermediate_reward(reward, next_state)
+                episode_reward += reward.item()
+
+                if not done and step == config['MAX_TIMESTEPS']:
+                    done = True
+
+                if done : next_state = None
+
+                # Store the transition in memory
+                model.memory.push(state, action, reward, next_state)
+
+                # Move to the next state
+                state = next_state
+
+                # Perform one step of the optimization (on the target network)
+                loss = model.optimize_model()
+
+                step += 1
+                nb_total_steps += 1
+
+            # Update the target network
+            if episode % model.config['TARGET_UPDATE'] == 0:
+                utils.update_targets(model.agent.target_nn, model.agent.nn, model.config['TAU'])
+            nb_episodes_done += 1
+
+            # Write scalars to tensorboard
+            writer.add_scalar('stats/reward_per_episode', episode_reward, episode)
+            if loss is not None:
+                writer.add_scalar('stats/loss', loss, episode)
+
+            # Write info to terminal
+            steps_per_sec.append(round(step/(time.time() - time_beginning_ep),3))
+            if episode % 100 == 0 :
+                print(f'Episode {episode}, Reward: {round(episode_reward, 2)}, '
+                      f'Steps: {step}, Epsilon: {utils.get_epsilon_threshold(nb_episodes_done, model.config):.5}, '
+                      f'LR: {model.agent.optimizer.param_groups[0]["lr"]:.4f}, Speed : {round(sum(steps_per_sec[-20:])/20,1) } steps/s')
 
 
+    except KeyboardInterrupt:
+        pass
 
-if __name__ == "__main__":
+    finally:
+        model.save()
+        print("\n\033[91m\033[1mModel saved in", folder, "\033[0m")
 
-    game = config['GAME']
-    model = Model(device, STATE_SIZE, ACTION_SIZE, expe_name, config)
+    time_execution = time.time() - time_beginning
 
-    print("Training !")
+    print('\n---------------------STATS-------------------------\n',
+          nb_total_steps, ' steps and updates of the network done\n',
+          nb_episodes_done, ' episodes done\n'
+          'Execution time : ', round(time_execution, 2), ' seconds\n'
+          'Average nb of steps per second : ', round(nb_total_steps/time_execution, 3), 'steps/s\n'
+          'Average duration of one episode : ', round(time_execution/nb_episodes_done, 3), 's\n')
 
-    model.episodes_done = 0
+    writer.close()
 
-    states = []
 
-    i_episode = 1
-    model.episodes_done = 1
-    
-    steps_per_sec = []
-
-    while i_episode < model.game_param['MAX_EPISODES'] : # and not model.gui.STOP:
-
-        time_beginning_ep = time.time()
-
-        # Initialize the environment and state
-        state = env.reset()
-
-        state = torch.tensor([state], dtype=torch.float, device=model.device)
-
-        i_episode_reward = 0
-        done = False
-        step = 0
-
-        while step <= model.game_param['MAX_TIMESTEPS'] and not done:
-
-            # Select and perform an action
-            action = model.select_action(state)
-            next_state, reward, done, _ = env.step(action.item())
-
-            next_state = torch.tensor([next_state], dtype=torch.float, device=model.device)
-
-            reward = intermediate_reward(reward, next_state)
-
-            #accumulated reward for each episode
-            i_episode_reward += reward.item()
-
-            if done : next_state = None
-            # Store the transition in memory
-            model.memory.push(state, action, reward, next_state)
-
-            # Move to the next state
-            state = next_state
-
-            # Perform one step of the optimization (on the target network)
-            model.optimize_model()
-
-            step += 1
-
-        writer.add_scalar('stats/reward_per_episode', i_episode_reward, i_episode)
-
-        steps_per_sec.append(round(step/(time.time() - time_beginning_ep),3))
-        if i_episode % 100 == 0 :
-            print(f'Episode {i_episode}, Reward: {i_episode_reward}, '
-                  f'Steps: {step}, Epsilon: {get_epsilon_threshold(model.episodes_done, model.game_param):.5}, '
-                  f'LR: {model.optimizer.param_groups[0]["lr"]:.4f}, average {round(sum(steps_per_sec[-20:])/20,1) } steps/s')
-
-        # Update the target network
-        if i_episode % model.game_param['TARGET_UPDATE'] == 0:
-            update_targets(model.target_network, model.policy_network, model.game_param['TAU'])
-
-        i_episode += 1
-        model.episodes_done += 1
-
-    print('Complete')
-
+if __name__ == '__main__':
+    train()

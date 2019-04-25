@@ -1,4 +1,5 @@
-GAME : 'CartPole-v1'
+# GAME : 'CartPole-v1'
+GAME : 'Acrobot-v1'
 
 BATCH_SIZE: 64
 GAMMA: 0.99
@@ -22,6 +23,8 @@ EPSILON_DECAY: 500
 DISPLAY : True
 GUI  : True
 LOAD : False
+
+DOUBLE_DQN : True
 
 
 ###########################################################################

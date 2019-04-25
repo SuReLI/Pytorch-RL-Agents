@@ -1,36 +1,65 @@
-import os
-import sys
-sys.path.extend(["../utils/", "../parameters/", "../results/DQN/"])
-
+import argparse
+import yaml
+import gym
 import torch
 
-from Agent import Agent
-from parameters import Parameters
+from model import Model
 
-# if gpu is to be used
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Testing DQN...")
 
-def get_game(args, default=2):
-    if len(args) > 1:
-        arg = args[1]
-        if arg.isdigit() and 0 <= int(arg) < 3:
-            return games[int(arg)]
-        elif arg in games:
-            return arg
-        else:
-            raise ValueError("This game is not recognized !")
-    else:
-        return default
+with open('config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+
+parser = argparse.ArgumentParser(description='Test DDPG on ' + config["GAME"])
+parser.add_argument('--render', action='store_true', dest="render",
+                    help='Display the tests')
+parser.add_argument('-n', '--nb_tests', default=10, type=int, dest="nb_tests",
+                    help="Number of evaluation to perform.")
+parser.add_argument('-f', '--folder', default='runs/', type=str, dest="folder",
+                    help="Folder where the models are saved")
+parser.add_argument('--gpu', action='store_true', help='Use GPU')
+args = parser.parse_args()
 
 
-if __name__ == "__main__":
+device = torch.device('cpu')
 
-    games = ['Acrobot-v1', 'MountainCar-v0', 'CartPole-v1']
+# Create gym environment
+env = gym.make(config["GAME"])
 
-    # Get game from command line argument
-    game = get_game(sys.argv, default='CartPole-v1')
+STATE_SIZE = env.observation_space.shape[0]
+ACTION_SIZE = env.action_space.n
 
-    print("Creating an agent that plays ", game)
-    agent = Agent(device, game, play=True)
+# Creating neural networks and loading models
+model = Model(device, STATE_SIZE, ACTION_SIZE, args.folder, config)
+model.load()
 
-    agent.play()
+# START EVALUATION
+
+try:
+    rewards = []
+
+    for ep in range(args.nb_tests):
+
+        state = env.reset()
+        state = torch.tensor([state], dtype=torch.float)
+        done = False
+        reward = 0
+
+        while not done:
+
+            action = model.select_action(state, 0, evaluation=True)
+            state, r, done, _ = env.step(action)
+            if args.render:
+                env.render()
+            state = torch.tensor([state], dtype=torch.float)
+            reward += r
+
+        rewards.append(reward)
+
+except KeyboardInterrupt:
+    pass
+
+finally:
+    env.close()
+
+print("Average reward over", args.nb_tests, " episodes : ", sum(rewards) / args.nb_tests)
