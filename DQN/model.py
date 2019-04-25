@@ -1,10 +1,6 @@
-import os
-import gym
-import random
-import yaml
-
 import sys
 sys.path.extend(["../commons/"])
+import random
 
 import torch
 import torch.optim as optim
@@ -12,7 +8,6 @@ from torch.optim import lr_scheduler
 import torch.nn.functional as F
 
 from utils import *
-# from Memory import ReplayMemory
 from networks import DQN
 
 
@@ -27,22 +22,6 @@ class Agent:
 
         self.optimizer = optim.Adam(self.nn.parameters(), lr=config['LEARNING_RATE'])
         self.scheduler = lr_scheduler.StepLR(self.optimizer, config['STEP_LR'], config['GAMMA_LR'])
-
-    # def select_action(self, state):
-    #     state = torch.FloatTensor(state).to(self.device)
-    #     return self.nn(state).cpu().detach().max(1)[1]
-    #     # return self.nn(state).cpu().detach().max(0)[1].item()
-
-    # def select_action(self, state, evaluation=False):
-    #     self.steps_done += 1
-
-    #     if evaluation or random.random() > get_epsilon_threshold(self.episodes_done, self.game_param):
-    #         with torch.no_grad():
-    #             return self.policy_network(state).max(1)[1].view(1, 1)
-
-    #     else:
-    #         return torch.tensor([[random.randrange(self.action_size)]],
-    #                             device=self.device, dtype=torch.long)
 
     def update(self, loss, grad_clipping=True):
         self.optimizer.zero_grad()
@@ -83,12 +62,6 @@ class Model:
         self.action_size = action_size
 
         self.agent = Agent(self.state_size, self.action_size, self.device, self.config)
-
-        #variables added for step_train function
-        self.episodes_reward = []
-        self.i_episode_reward = 0
-
-        # self.load_network(play=play)
  
     def select_action(self, state, episode, evaluation=False):
         if evaluation or random.random() > get_epsilon_threshold(episode, self.config):
@@ -116,24 +89,24 @@ class Model:
             return
 
         transitions = self.memory.sample(self.config['BATCH_SIZE'])
-        # Transpose the batch (see http://stackoverflow.com/a/19343/3343043 for
-        # detailed explanation).
-        batch = Transition(*zip(*transitions))
-
+        batch = list(zip(*transitions))
         # Compute a mask of non-final states and concatenate the batch elements
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                                batch.next_state)),
+                                                batch[3])),
                                       device=self.device, dtype=torch.uint8)
                                       
-        non_final_next_states = torch.cat([s for s in batch.next_state
+        non_final_next_states = torch.cat([s for s in batch[3]
                                            if s is not None])
-        state_batch = torch.cat(batch.state)
-        action_batch = torch.cat(batch.action)
-        reward_batch = torch.cat(batch.reward)
+        states = torch.cat(batch[0])
+        actions = torch.cat(batch[1])
+        rewards = torch.cat(batch[2])
+        # states_batch = torch.FloatTensor(batch[0]).to(self.device)
+        # actions_batch = torch.FloatTensor(batch[1]).to(self.device)
+        # rewards_batch = torch.FloatTensor(batch[2]).unsqueeze(1).to(self.device)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken
-        state_action_values = self.agent.nn(state_batch).gather(1, action_batch)
+        state_action_values = self.agent.nn(states).gather(1, actions)
 
         if self.config['DOUBLE_DQN']:
             # ========================== DOUBLE DQN ===============================
@@ -157,7 +130,7 @@ class Model:
             # =====================================================================
 
         # Compute the expected Q values
-        expected_state_action_values = (next_state_values * self.config['GAMMA']**self.config['N_STEP']) + reward_batch
+        expected_state_action_values = (next_state_values * self.config['GAMMA']**self.config['N_STEP']) + rewards
         expected_state_action_values = expected_state_action_values.view(self.config['BATCH_SIZE'], 1)
 
         # Compute Huber loss
@@ -166,21 +139,8 @@ class Model:
         # Optimize the model
         self.agent.update(loss)
 
+        return loss.item()
 
-    def play(self, number_run=1):
-        for i in range(number_run):
-            state = self.env.reset()
-            state = torch.tensor([state], dtype=torch.float)
-            i_episode_reward = 0
-            done = False
-
-            while not done:
-                self.env.render()
-                action = self.select_action(state, evaluation=True)
-                state, reward, done, _ = self.env.step(action.item())
-                state = torch.tensor([state], dtype=torch.float)
-                i_episode_reward += reward
-            print("Episode reward : ", i_episode_reward)
 
     def save(self):
         self.agent.save(self.folder)

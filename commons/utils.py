@@ -2,11 +2,9 @@ import os
 import datetime
 import random
 
-from collections import namedtuple
 import math
 from collections import deque
 
-Transition = namedtuple('Transition', ('state', 'action', 'reward', 'next_state'))
 
 class ReplayMemory:
 
@@ -38,8 +36,8 @@ class DQNReplayMemory:
         self.n_step_memory = deque()
         self.position = 0
 
-    def push(self, *args):
-        self.n_step_memory.append(args)
+    def push(self, *transition):
+        self.n_step_memory.append(transition)
         if len(self.n_step_memory) >= self.n_step:
             s_mem, a_mem, R, si_ = self.n_step_memory.popleft()
             for i in range(self.n_step-1):
@@ -49,9 +47,9 @@ class DQNReplayMemory:
                 R += ri * self.gamma ** (i+1)
 
             if len(self.memory) < self.capacity:
-                self.memory.append(Transition(s_mem, a_mem, R, si_))
+                self.memory.append([s_mem, a_mem, R, si_])
             else:
-                self.memory[self.position] = Transition(s_mem, a_mem, R, si_)
+                self.memory[self.position] = [s_mem, a_mem, R, si_]
                 self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):
