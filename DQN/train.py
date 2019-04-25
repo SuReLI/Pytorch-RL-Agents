@@ -8,6 +8,7 @@ except ModuleNotFoundError:
     trange = range
 
 import numpy as np
+import matplotlib.pyplot as plt
 import gym
 import yaml
 
@@ -28,8 +29,8 @@ parser.add_argument('--gpu', help='Use GPU', action='store_true')
 args = parser.parse_args()
 
 # Create folder and writer to write tensorboard values
-current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-folder = f'runs/{current_time}_{config["GAME"][:4]}'
+current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+folder = f'runs/{config["GAME"].split("-")[0]}_{current_time}'
 writer = SummaryWriter(folder)
 if not os.path.exists(folder+'/models/'):
     os.mkdir(folder+'/models/')
@@ -69,6 +70,7 @@ def train():
     try:
         print("Starting training...")
         nb_episodes_done = 0
+        rewards = []
         steps_per_sec = []
 
         for episode in range(config['MAX_EPISODES']) :
@@ -107,6 +109,8 @@ def train():
                 step += 1
                 nb_total_steps += 1
 
+            rewards.append(episode_reward)
+
             # Update the target network
             if episode % model.config['TARGET_UPDATE'] == 0:
                 utils.update_targets(model.agent.target_nn, model.agent.nn, model.config['TAU'])
@@ -124,6 +128,10 @@ def train():
                       f'Steps: {step}, Epsilon: {utils.get_epsilon_threshold(nb_episodes_done, model.config):.5}, '
                       f'LR: {model.agent.optimizer.param_groups[0]["lr"]:.4f}, Speed : {round(sum(steps_per_sec[-20:])/20,1) } steps/s')
 
+            if nb_episodes_done % 25 == 0:
+                plt.cla()
+                plt.plot(rewards)
+                plt.savefig(folder+'/rewards.png')
 
     except KeyboardInterrupt:
         pass
