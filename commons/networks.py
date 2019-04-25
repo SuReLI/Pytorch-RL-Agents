@@ -18,7 +18,7 @@ class DQN(nn.Module):
         x = F.relu(self.hidden1(x))
         x = F.relu(self.hidden2(x))
         x = F.relu(self.hidden3(x))
-        return self.output(x)#.view(x.size(0), -1))
+        return self.output(x)
 
 
 class CriticNetwork(nn.Module):
@@ -54,6 +54,8 @@ class ActorNetwork(nn.Module):
 
 class Critic:
     def __init__(self, state_size, action_size, device, config):
+        self.device = device
+
         self.nn = CriticNetwork(state_size + action_size, config['HIDDEN_LAYERS']).to(device)
         self.target_nn = CriticNetwork(state_size + action_size, config['HIDDEN_LAYERS']).to(device)
         self.target_nn.load_state_dict(self.nn.state_dict())
@@ -73,8 +75,10 @@ class Critic:
         torch.save(self.target_nn.state_dict(), folder+'/models/critic_target.pth')
 
     def load(self, folder):
-        self.nn.load_state_dict(torch.load(folder+'/models/critic.pth', map_location='cpu'))
-        self.target_nn.load_state_dict(torch.load(folder+'/models/critic_target.pth', map_location='cpu'))
+        self.nn.load_state_dict(torch.load(folder+'/models/critic.pth',
+                                           map_location=self.device))
+        self.target_nn.load_state_dict(torch.load(folder+'/models/critic_target.pth',
+                                                  map_location=self.device))
 
     def target(self, state, action):
         state_action = torch.cat([state, action], -1)
@@ -108,8 +112,10 @@ class Actor:
         torch.save(self.target_nn.state_dict(), folder+'/models/actor_target.pth')
 
     def load(self, folder):
-        self.nn.load_state_dict(torch.load(folder+'/models/actor.pth', map_location='cpu'))
-        self.target_nn.load_state_dict(torch.load(folder+'/models/actor_target.pth', map_location='cpu'))
+        self.nn.load_state_dict(torch.load(folder+'/models/actor.pth',
+                                           map_location=self.device))
+        self.target_nn.load_state_dict(torch.load(folder+'/models/actor_target.pth',
+                                                  map_location=self.device))
 
     def select_action(self, state):
         state = torch.FloatTensor(state).to(self.device)
