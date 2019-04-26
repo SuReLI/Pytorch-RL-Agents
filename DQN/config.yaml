@@ -2,45 +2,23 @@
 GAME : 'Acrobot-v1'
 
 BATCH_SIZE: 8
-GAMMA: 0.99
 MEMORY_SIZE: 10000
+MAX_TIMESTEPS: 200
+MAX_EPISODES: 10000
+
+GAMMA: 0.99
 TARGET_UPDATE: 4
 TAU: 0.5
 LEARNING_RATE: 0.001
 GAMMA_LR: 0.9
 STEP_LR: 2000
-MAX_TIMESTEPS: 200
-MAX_EPISODES: 1000
-STATE_SAVE_PROBA: 0.5
 
 # Exploration settings
-
 EPSILON_START: 0.2
 EPSILON_END: 0.05
 EPSILON_DECAY: 500
 
-# Parameters
-DISPLAY : True
-GUI  : True
-LOAD : False
-
-DOUBLE_DQN : True
-
-
-###########################################################################
-# Algorithm hyper-parameters
-
+DOUBLE_DQN : False
 N_STEP : 1
-GAMMA_N : GAMMA ** N_STEP
 
 GRAD_CLAMPING : False
-
-###########################################################################
-# Display frequencies
-
-EP_REWARD_FREQ : 100
-PLOT_FREQ      : 200
-RENDER_FREQ    : 500
-SAVE_FREQ      : 0
-
-RESULTS_PATH : 'results/'

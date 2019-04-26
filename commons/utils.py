@@ -26,7 +26,7 @@ class ReplayMemory:
         return len(self.memory)
 
 
-class DQNReplayMemory:
+class NStepsReplayMemory:
 
     def __init__(self, capacity, n_step, gamma):
         self.capacity = capacity
@@ -39,17 +39,17 @@ class DQNReplayMemory:
     def push(self, *transition):
         self.n_step_memory.append(transition)
         if len(self.n_step_memory) >= self.n_step:
-            s_mem, a_mem, R, si_ = self.n_step_memory.popleft()
+            s_mem, a_mem, R, si_, done = self.n_step_memory.popleft()
             for i in range(self.n_step-1):
-                si, ai, ri, si_ = self.n_step_memory[i]
+                si, ai, ri, si_, done = self.n_step_memory[i]
                 if si is None:
                     break
                 R += ri * self.gamma ** (i+1)
 
             if len(self.memory) < self.capacity:
-                self.memory.append([s_mem, a_mem, R, si_])
+                self.memory.append([s_mem, a_mem, R, si_, done])
             else:
-                self.memory[self.position] = [s_mem, a_mem, R, si_]
+                self.memory[self.position] = [s_mem, a_mem, R, si_, done]
                 self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):

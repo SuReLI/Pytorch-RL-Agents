@@ -78,7 +78,7 @@ def train():
 
             # Initialize the environment and state
             state = env.reset()
-            state = torch.tensor([state], dtype=torch.float, device=model.device)
+            # state = torch.tensor([state], dtype=torch.float, device=model.device)
             episode_reward = 0
             done = False
             step = 0
@@ -87,18 +87,18 @@ def train():
 
                 # Select and perform an action
                 action = model.select_action(state, episode)
-                next_state, reward, done, _ = env.step(action.item())
-                next_state = torch.tensor([next_state], dtype=torch.float, device=model.device)
+                next_state, reward, done, _ = env.step(action)
+                # next_state = torch.tensor([next_state], dtype=torch.float, device=model.device)
                 reward = model.intermediate_reward(reward, next_state)
                 episode_reward += reward.item()
 
                 if not done and step == config['MAX_TIMESTEPS']:
                     done = True
 
-                if done : next_state = None
+                # if done : next_state = None
 
                 # Store the transition in memory
-                model.memory.push(state, action, reward, next_state)
+                model.memory.push(state, action, reward, next_state, 1-int(done))
 
                 # Move to the next state
                 state = next_state

@@ -40,6 +40,11 @@ class Agent:
         self.nn.load_state_dict(torch.load(folder+'/models/dqn.pth', map_location='cpu'))
         self.target_nn.load_state_dict(torch.load(folder+'/models/dqn_target.pth', map_location='cpu'))
 
+    def select_action(self, state):
+        with torch.no_grad():
+            state = torch.FloatTensor(state).to(self.device)
+            return self.nn(state).cpu().detach().argmax().item()
+
     def target(self, state):
         state_action = torch.cat([state], -1)
         return self.target_nn(state_action)
@@ -56,7 +61,7 @@ class Model:
         self.folder = folder
         self.config = config
         self.device = device
-        self.memory = DQNReplayMemory(self.config['MEMORY_SIZE'], self.config['N_STEP'], self.config['GAMMA'])
+        self.memory = NStepsReplayMemory(self.config['MEMORY_SIZE'], self.config['N_STEP'], self.config['GAMMA'])
 
         self.state_size = state_size
         self.action_size = action_size
@@ -65,16 +70,13 @@ class Model:
  
     def select_action(self, state, episode, evaluation=False):
         if evaluation or random.random() > get_epsilon_threshold(episode, self.config):
-            with torch.no_grad():
-                return self.agent.nn(state).max(1)[1].view(1, 1)
-
+            return self.agent.select_action(state)
         else:
-            return torch.tensor([[random.randrange(self.action_size)]],
-                                device=self.device, dtype=torch.long)
+            return random.randrange(self.action_size)
 
     def intermediate_reward(self, reward, next_state):
-        if self.config['GAME'] == 'Acrobot-v1' and next_state[0][0] != 0:
-            return torch.tensor([reward + 1 - next_state[0][0]], device=self.device)
+        if self.config['GAME'] == 'Acrobot-v1' and next_state[0] != 0:
+            return reward + 1 - next_state[0]
 
         elif self.config['GAME'] == 'MountainCar-v0' and next_state[0][0] < 0.5:
             return torch.tensor([abs(next_state[0][0]+0.4)], device=self.device)
@@ -90,23 +92,15 @@ class Model:
 
         transitions = self.memory.sample(self.config['BATCH_SIZE'])
         batch = list(zip(*transitions))
-        # Compute a mask of non-final states and concatenate the batch elements
-        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                                batch[3])),
-                                      device=self.device, dtype=torch.uint8)
-                                      
-        non_final_next_states = torch.cat([s for s in batch[3]
-                                           if s is not None])
-        states = torch.cat(batch[0])
-        actions = torch.cat(batch[1])
-        rewards = torch.cat(batch[2])
-        # states_batch = torch.FloatTensor(batch[0]).to(self.device)
-        # actions_batch = torch.FloatTensor(batch[1]).to(self.device)
-        # rewards_batch = torch.FloatTensor(batch[2]).unsqueeze(1).to(self.device)
 
-        # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
-        # columns of actions taken
-        state_action_values = self.agent.nn(states).gather(1, actions)
+        states = torch.FloatTensor(batch[0]).to(self.device)
+        actions = torch.LongTensor(batch[1]).to(self.device)
+        rewards = torch.FloatTensor(batch[2]).unsqueeze(1).to(self.device)
+        next_states = torch.FloatTensor(batch[3]).to(self.device)
+        done = torch.FloatTensor(batch[4]).unsqueeze(1).to(self.device)
+
+        # Compute Q(s_t, a) - the model computes Q(s_t), then we select the columns of actions taken
+        current_Q = self.agent.nn(states).gather(1, actions.unsqueeze(1))
 
         if self.config['DOUBLE_DQN']:
             # ========================== DOUBLE DQN ===============================
@@ -120,21 +114,21 @@ class Model:
             # Compute V(s_{t+1}) for all next states.
             next_state_values = torch.zeros(self.config['BATCH_SIZE'], device=self.device)
             next_state_values[non_final_mask] = next_state_values_temp.view(1, len(non_final_next_states))
+
+            target_Q = rewards + done * (self.config["GAMMA"]**self.config['N_STEP']) * next_Q
             # =====================================================================
 
         else:
             # ============================== DQN ==================================
-            # Compute V(s_{t+1}) for all next states.
-            next_state_values = torch.zeros(self.config['BATCH_SIZE'], device=self.device)
-            next_state_values[non_final_mask] = self.agent.target(non_final_next_states).max(1)[0].detach()
+            # Compute Q(s_{t+1}) for all next states and select the max 
+            next_Q = self.agent.target(next_states).max(1)[0].unsqueeze(1)
+
+            # Compute the expected Q values : y[i]= r[i] + gamma * Q'(s[i+1], a[i+1])
+            target_Q = rewards + done * self.config["GAMMA"] * next_Q
             # =====================================================================
 
-        # Compute the expected Q values
-        expected_state_action_values = (next_state_values * self.config['GAMMA']**self.config['N_STEP']) + rewards
-        expected_state_action_values = expected_state_action_values.view(self.config['BATCH_SIZE'], 1)
-
         # Compute Huber loss
-        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values)
+        loss = F.mse_loss(current_Q, target_Q)
 
         # Optimize the model
         self.agent.update(loss)
