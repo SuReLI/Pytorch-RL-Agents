@@ -67,6 +67,9 @@ class Model:
         self.action_size = action_size
 
         self.agent = Agent(self.state_size, self.action_size, self.device, self.config)
+
+        # Compute gamma^n for n-steps return
+        self.gamma_n = self.config["GAMMA"]**self.config['N_STEP']
  
     def select_action(self, state, episode, evaluation=False):
         if evaluation or random.random() > get_epsilon_threshold(episode, self.config):
@@ -105,17 +108,13 @@ class Model:
         if self.config['DOUBLE_DQN']:
             # ========================== DOUBLE DQN ===============================
             # Compute argmax_a Q(s_{t+1}, a)
-            next_state_values = torch.zeros(self.config['BATCH_SIZE'], device=self.device)
-            next_state_actions = self.agent(non_final_next_states).max(1)[1].view(len(non_final_next_states), 1).detach()
+            next_actions = self.agent(next_states).argmax(1).unsqueeze(1)
 
-            # Compute Q_target(s_{t+1}, argmax_a Q(s_{t+1}, a))   for a double DQN
-            next_state_values_temp = self.agent.target(non_final_next_states).gather(1, next_state_actions).detach()
+            # Compute Q_target(s_{t+1}, argmax_a Q(s_{t+1}, a)) for a double DQN
+            next_Q = self.agent.target(next_states).gather(1, next_actions)
 
-            # Compute V(s_{t+1}) for all next states.
-            next_state_values = torch.zeros(self.config['BATCH_SIZE'], device=self.device)
-            next_state_values[non_final_mask] = next_state_values_temp.view(1, len(non_final_next_states))
-
-            target_Q = rewards + done * (self.config["GAMMA"]**self.config['N_STEP']) * next_Q
+            # Compute the expected Q values : y[i]= r[i] + gamma * Q'(s[i+1], a[i+1])
+            target_Q = rewards + done * self.gamma_n * next_Q
             # =====================================================================
 
         else:
@@ -124,7 +123,7 @@ class Model:
             next_Q = self.agent.target(next_states).max(1)[0].unsqueeze(1)
 
             # Compute the expected Q values : y[i]= r[i] + gamma * Q'(s[i+1], a[i+1])
-            target_Q = rewards + done * self.config["GAMMA"] * next_Q
+            target_Q = rewards + done * self.gamma_n * next_Q
             # =====================================================================
 
         # Compute Huber loss

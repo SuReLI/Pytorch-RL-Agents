@@ -78,7 +78,6 @@ def train():
 
             # Initialize the environment and state
             state = env.reset()
-            # state = torch.tensor([state], dtype=torch.float, device=model.device)
             episode_reward = 0
             done = False
             step = 0
@@ -88,14 +87,11 @@ def train():
                 # Select and perform an action
                 action = model.select_action(state, episode)
                 next_state, reward, done, _ = env.step(action)
-                # next_state = torch.tensor([next_state], dtype=torch.float, device=model.device)
                 reward = model.intermediate_reward(reward, next_state)
                 episode_reward += reward.item()
 
                 if not done and step == config['MAX_TIMESTEPS']:
                     done = True
-
-                # if done : next_state = None
 
                 # Store the transition in memory
                 model.memory.push(state, action, reward, next_state, 1-int(done))
@@ -117,9 +113,10 @@ def train():
             nb_episodes_done += 1
 
             # Write scalars to tensorboard
-            writer.add_scalar('stats/reward_per_episode', episode_reward, episode)
+            writer.add_scalar('reward_per_episode', episode_reward, episode)
+            writer.add_scalar('steps_per_episode', step, episode)
             if loss is not None:
-                writer.add_scalar('stats/loss', loss, episode)
+                writer.add_scalar('loss', loss, episode)
 
             # Write info to terminal
             steps_per_sec.append(round(step/(time.time() - time_beginning_ep),3))
@@ -128,6 +125,7 @@ def train():
                       f'Steps: {step}, Epsilon: {utils.get_epsilon_threshold(nb_episodes_done, model.config):.5}, '
                       f'LR: {model.agent.optimizer.param_groups[0]["lr"]:.4f}, Speed : {round(sum(steps_per_sec[-20:])/20,1) } steps/s')
 
+            # Stores .png of the reward graph 
             if nb_episodes_done % 25 == 0:
                 plt.cla()
                 plt.plot(rewards)
