@@ -1,5 +1,5 @@
 
-GAME : "BipedalWalker-v2"
+GAME : "LunarLanderContinuous-v2"
 
 HIDDEN_LAYERS : [400, 300]
 
@@ -14,5 +14,5 @@ EXPLO_SIGMA : 0.1  # Exploration noise
 UPDATE_SIGMA : 0.2
 UPDATE_CLIP : 0.5
 
-MAX_EPISODES : 50000
+MAX_EPISODES : 10000
 MAX_STEPS : 50000

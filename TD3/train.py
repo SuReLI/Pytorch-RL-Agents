@@ -129,6 +129,8 @@ def train():
         env.close()
         writer.close()
         model.save()
+        game_name = config["GAME"].split("-")[0]
+        model.memory.write(game_name + '.csv')
         print("\033[91m\033[1mModel saved in", expe_name, "\033[0m")
 
     time_execution = time.time() - time_beginning
