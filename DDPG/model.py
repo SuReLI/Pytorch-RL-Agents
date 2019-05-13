@@ -1,6 +1,8 @@
 import sys
 sys.path.extend(["../commons/"])
 
+import gym
+
 import torch
 import torch.nn.functional as F
 
@@ -24,6 +26,8 @@ class Model:
 
         self.critic = Critic(state_size, action_size, device, self.config)
         self.actor = Actor(state_size, action_size, low_bound, high_bound, device, self.config)
+
+        self.eval_env = gym.make(self.config["GAME"])
 
     def select_action(self, state):
         return self.actor.select_action(state)
@@ -70,6 +74,29 @@ class Model:
         update_targets(self.actor.target_nn, self.actor.nn, self.config["TAU"])
 
         return loss_actor.item(), loss_critic.item()
+
+
+    def evaluate(self, n_ep=10, render=False):
+
+        rewards = [0]*n_ep
+        steps = [0]*n_ep
+
+        for ep in range(n_ep):
+
+            state = self.eval_env.reset()
+            done = False
+            step = 0
+            while not done and step < self.config["MAX_STEPS"]:
+
+                action = self.select_action(state)
+                state, r, done, _ = self.eval_env.step(action)
+                if render:
+                    self.eval_env.render()
+                rewards[ep] += r
+                steps[ep] += 1
+                step += 1
+
+        return sum(rewards) / n_ep, sum(steps) / n_ep
 
     def save(self):
         self.actor.save(self.folder)

@@ -17,5 +17,7 @@ TAU : 0.005
 
 EXPLO_SIGMA : 0.1  # Exploration noise
 
-MAX_EPISODES : 10000
+MAX_EPISODES : 3000
 MAX_STEPS : 10000  # Max steps per episode
+
+FREQ_EVAL : 20 # Frequency of evaluation of learning

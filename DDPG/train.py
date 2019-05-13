@@ -81,6 +81,9 @@ def train():
 
             state = env.reset()
 
+            losses_actor = []
+            losses_critic = []
+
             while not done and step < config["MAX_STEPS"]:
 
                 action = model.select_action(state)
@@ -100,21 +103,30 @@ def train():
                 state = next_state
 
                 actor_loss, critic_loss = model.optimize()
+                if actor_loss is not None:
+                    losses_actor.append(actor_loss)
+                    losses_critic.append(critic_loss)
 
                 step += 1
                 nb_total_steps += 1
 
             rewards.append(episode_reward)
 
-            writer.add_scalar('episode_rewards/actor', episode_reward, episode)
-            if actor_loss is not None:
-                writer.add_scalar('loss/actor_loss', actor_loss, episode)
-                writer.add_scalar('loss/critic_loss', critic_loss, episode)
+            # Write values in tensorboard
+            if nb_episodes % config["FREQ_EVAL"] == 0:
 
-            if nb_episodes % 25 == 0:
+                if losses_critic != [] and losses_actor != []:
+                    writer.add_scalar('losses/actor_loss', sum(losses_actor)/len(losses_actor), episode)
+                    writer.add_scalar('losses/critic_loss', sum(losses_critic)/len(losses_critic), episode)
+
+                reward_eval, len_eval = model.evaluate()
+                writer.add_scalar('learning/reward_per_episode', reward_eval, episode)
+                writer.add_scalar('learning/length_episode', len_eval, episode)
+
                 plt.cla()
                 plt.plot(rewards)
                 plt.savefig(expe_name+'/rewards.png')
+
 
             nb_episodes += 1
 
