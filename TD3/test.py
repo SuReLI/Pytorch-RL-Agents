@@ -8,6 +8,7 @@ import torch
 
 from model import Model
 from utils import get_latest_dir
+from EnvWrapper import PendulumWrapper, LunarWrapper
 
 
 with open('config.yaml', 'r') as file:
@@ -21,13 +22,23 @@ parser.add_argument('-n', '--nb_tests', default=10, type=int, dest="nb_tests",
                     help="Number of evaluation to perform.")
 parser.add_argument('-f', '--folder', default=default_dir, type=str, dest="folder",
                     help="Folder where the models are saved")
+parser.add_argument('--hard_test', action='store_true', dest="hard_test",
+                    help="Whether the resets are random")
 args = parser.parse_args()
 
 
 device = torch.device('cpu')
 
 # Create gym environment
-env = gym.make(config["GAME"])
+if args.hard_test:
+    if config["GAME"].startswith("LunarLander"):
+        env = LunarWrapper()
+    elif config["GAME"].startswith("Pendulum"):
+        env = PendulumWrapper()
+    else:
+        raise Exception("Can't hard reset on this game !")
+else:
+    env = gym.make(config["GAME"])
 
 LOW_BOUND = int(env.action_space.low[0])
 HIGH_BOUND = int(env.action_space.high[0])
