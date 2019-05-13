@@ -8,6 +8,7 @@ except ModuleNotFoundError:
     trange = range
 
 import numpy as np
+import matplotlib.pyplot as plt
 import gym
 import yaml
 
@@ -15,8 +16,8 @@ import torch
 from tensorboardX import SummaryWriter
 
 from model import Model
-from Agent import Agent
 
+import utils
 
 print("DQN starting...")
 
@@ -24,21 +25,21 @@ with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 parser = argparse.ArgumentParser(description='Run DQN on ' + config["GAME"])
-parser.add_argument('--gpu', action='store_true', help='Use GPU')
+parser.add_argument('--gpu', help='Use GPU', action='store_true')
 args = parser.parse_args()
 
 # Create folder and writer to write tensorboard values
-current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-expe_name = f'runs/{current_time}_{config["GAME"][:4]}'
-writer = SummaryWriter(expe_name)
-if not os.path.exists(expe_name+'/models/'):
-    os.mkdir(expe_name+'/models/')
+current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+folder = f'runs/{config["GAME"].split("-")[0]}_{current_time}'
+writer = SummaryWriter(folder)
+if not os.path.exists(folder+'/models/'):
+    os.mkdir(folder+'/models/')
 
 # Write optional info about the experiment to tensorboard
 for k, v in config.items():
-    writer.add_text('Config', str(k) + ' : ' + str(v), 0)
+    writer.add_text('Config',  str(k) + ' : ' + str(v), 0)
 
-with open(expe_name+'/config.yaml', 'w') as file:
+with open(folder+'/config.yaml', 'w') as file:
     yaml.dump(config, file)
 
 # Choose device cpu or cuda if a gpu is available
@@ -61,7 +62,7 @@ ACTION_SIZE = env.action_space.n
 def train():
 
     print("Creating neural networks and optimizers...")
-    model = Model(device, STATE_SIZE, ACTION_SIZE, expe_name, config)
+    model = Model(device, STATE_SIZE, ACTION_SIZE, folder, config)
 
     nb_total_steps = 0
     time_beginning = time.time()
@@ -69,62 +70,82 @@ def train():
     try:
         print("Starting training...")
         nb_episodes_done = 0
-        for episode in trange(config["MAX_EPISODES"]):
+        rewards = []
+        steps_per_sec = []
 
+        for episode in range(config['MAX_EPISODES']) :
+            time_beginning_ep = time.time()
+
+            # Initialize the environment and state
             state = env.reset()
-            state = torch.tensor([state], dtype=torch.float, device=device)
+            episode_reward = 0
             done = False
             step = 0
-            current_reward = 0
 
-            while not done and step < config["MAX_STEPS"]:
+            while step <= config['MAX_TIMESTEPS'] and not done:
 
+                # Select and perform an action
                 action = model.select_action(state, episode)
+                next_state, reward, done, _ = env.step(action)
+                reward = model.intermediate_reward(reward, next_state)
+                episode_reward += reward.item()
 
-                # Perform an action
-                next_state, reward, done, _ = env.step(action.item())
-                next_state = torch.tensor([next_state], dtype=torch.float, device=device)
-                reward = torch.tensor([reward], device=device)
-                current_reward += reward.item()
-
-                if not done and step == config["MAX_STEPS"]:
+                if not done and step == config['MAX_TIMESTEPS']:
                     done = True
 
-                # Save transition into memory
-                model.memory.push(state, action, reward, next_state)#, 1-int(done))
+                # Store the transition in memory
+                model.memory.push(state, action, reward, next_state, 1-int(done))
+
+                # Move to the next state
                 state = next_state
 
-                loss = model.optimize(nb_episodes_done, step)
+                # Perform one step of the optimization (on the target network)
+                loss = model.optimize_model()
 
                 step += 1
                 nb_total_steps += 1
 
-            print('episode : ', episode, ', current_reward : ', current_reward, ', loss : ', loss)
-            writer.add_scalar('stats/reward_per_episode', current_reward, episode)
-            if loss is not None:
-                writer.add_scalar('stats/loss', loss, episode)
+            rewards.append(episode_reward)
 
+            # Update the target network
+            if episode % model.config['TARGET_UPDATE'] == 0:
+                utils.update_targets(model.agent.target_nn, model.agent.nn, model.config['TAU'])
             nb_episodes_done += 1
+
+            # Write scalars to tensorboard
+            writer.add_scalar('reward_per_episode', episode_reward, episode)
+            writer.add_scalar('steps_per_episode', step, episode)
+            if loss is not None:
+                writer.add_scalar('loss', loss, episode)
+
+            # Write info to terminal
+            steps_per_sec.append(round(step/(time.time() - time_beginning_ep),3))
+            if episode % 100 == 0 :
+                print(f'Episode {episode}, Reward: {round(episode_reward, 2)}, '
+                      f'Steps: {step}, Epsilon: {utils.get_epsilon_threshold(nb_episodes_done, model.config):.5}, '
+                      f'LR: {model.agent.optimizer.param_groups[0]["lr"]:.4f}, Speed : {round(sum(steps_per_sec[-20:])/20,1) } steps/s')
+
+            # Stores .png of the reward graph 
+            if nb_episodes_done % 25 == 0:
+                plt.cla()
+                plt.plot(rewards)
+                plt.savefig(folder+'/rewards.png')
 
     except KeyboardInterrupt:
         pass
 
     finally:
         model.save()
-        print("\033[91m\033[1mModel saved in", expe_name, "\033[0m")
+        print("\n\033[91m\033[1mModel saved in", folder, "\033[0m")
 
     time_execution = time.time() - time_beginning
 
-    print('---------------------------------------------------\n'
-          '---------------------STATS-------------------------\n'
-          '---------------------------------------------------\n',
+    print('\n---------------------STATS-------------------------\n',
           nb_total_steps, ' steps and updates of the network done\n',
           nb_episodes_done, ' episodes done\n'
-          'Execution time ', round(time_execution, 2), ' seconds\n'
-          '---------------------------------------------------\n'
+          'Execution time : ', round(time_execution, 2), ' seconds\n'
           'Average nb of steps per second : ', round(nb_total_steps/time_execution, 3), 'steps/s\n'
-          'Average duration of one episode : ', round(time_execution/nb_episodes_done, 3), 's\n'
-          '---------------------------------------------------')
+          'Average duration of one episode : ', round(time_execution/nb_episodes_done, 3), 's\n')
 
     writer.close()
 
