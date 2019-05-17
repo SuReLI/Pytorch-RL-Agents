@@ -62,7 +62,7 @@ class Critic:
 
         self.optimizer = optim.Adam(self.nn.parameters(), lr=config["LEARNING_RATE_CRITIC"])
 
-    def update(self, loss, grad_clipping=True):
+    def update(self, loss, grad_clipping=False):
         self.optimizer.zero_grad()
         loss.backward()
         if grad_clipping:
@@ -99,7 +99,7 @@ class Actor:
 
         self.optimizer = optim.Adam(self.nn.parameters(), lr=config["LEARNING_RATE_ACTOR"])
 
-    def update(self, loss, grad_clipping=True):
+    def update(self, loss, grad_clipping=False):
         self.optimizer.zero_grad()
         loss.backward()
         if grad_clipping:

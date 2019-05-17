@@ -1,6 +1,7 @@
 import sys
 sys.path.extend(["../commons/"])
 
+import imageio
 import gym
 
 import torch
@@ -27,6 +28,8 @@ class Model:
 
         self.critic = Critic(state_size, action_size, device, self.config)
         self.actor = Actor(state_size, action_size, low_bound, high_bound, device, self.config)
+
+        self.eval_env = gym.make(self.config["GAME"])
 
     def select_action(self, state):
         return self.actor.select_action(state)
@@ -74,8 +77,10 @@ class Model:
 
         return loss_actor.item(), loss_critic.item()
 
-    def evaluate(self, n_ep=10, render=False):
+    def evaluate(self, n_ep=10, render=False, gif=False):
         rewards = []
+        if gif:
+            writer = imageio.get_writer(self.folder + '/results.gif', duration=0.005)
         try:
             for i in range(n_ep):
                 state = self.eval_env.reset()
@@ -87,6 +92,8 @@ class Model:
                     state, r, done, _ = self.eval_env.step(action)
                     if render:
                         self.eval_env.render()
+                    if i == 0 and gif:
+                        writer.append_data(self.eval_env.render(mode='rgb_array'))
                     reward += r
                     steps += 1
                 rewards.append(reward)
@@ -96,6 +103,8 @@ class Model:
 
         finally:
             self.eval_env.close()
+            if gif:
+                writer.close()
 
         score = sum(rewards)/len(rewards) if rewards else 0
         return score

@@ -83,7 +83,11 @@ def train():
 
             while not done and step < config["MAX_STEPS"]:
 
-                action = model.select_action(state)
+                if nb_total_steps < 1000:
+                    action = env.action_space.sample()
+
+                else:
+                    action = model.select_action(state)
 
                 noise = np.random.normal(scale=config["EXPLO_SIGMA"], size=ACTION_SIZE)
                 action = np.clip(action+noise, LOW_BOUND, HIGH_BOUND)
@@ -106,10 +110,11 @@ def train():
 
             rewards.append(episode_reward)
 
-            writer.add_scalar('episode_rewards/actor', episode_reward, episode)
             if actor_loss is not None:
                 writer.add_scalar('loss/actor_loss', actor_loss, episode)
+            if critic_loss is not None:
                 writer.add_scalar('loss/critic_loss', critic_loss, episode)
+            writer.add_scalar('episode_rewards/actor', episode_reward, episode)
 
             if nb_episodes % config["FREQ_PLOT"] == 0:
                 plt.cla()

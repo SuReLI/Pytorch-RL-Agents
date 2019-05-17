@@ -15,6 +15,8 @@ from env_wrapper import PendulumWrapper, LunarWrapper
 parser = argparse.ArgumentParser(description='Test TD3')
 parser.add_argument('--no_render', action='store_false', dest="render",
                     help='Display the tests')
+parser.add_argument('--gif', action='store_true', dest="gif",
+                    help='Save a gif of a test')
 parser.add_argument('-n', '--nb_tests', default=10, type=int, dest="nb_tests",
                     help="Number of evaluation to perform.")
 parser.add_argument('-f', '--folder', default=None, type=str, dest="folder",
@@ -52,5 +54,5 @@ model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, args.folde
 model.eval_env = env
 model.load()
 
-score = model.evaluate(n_ep=args.nb_tests, render=args.render)
+score = model.evaluate(n_ep=args.nb_tests, render=args.render, gif=args.gif)
 print(f"Average score : {score}")
