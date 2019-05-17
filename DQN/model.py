@@ -1,11 +1,13 @@
 import sys
 sys.path.extend(["../commons/"])
+
 import random
+import gym
 
 import torch
 import torch.optim as optim
-from torch.optim import lr_scheduler
 import torch.nn.functional as F
+from torch.optim import lr_scheduler
 
 from utils import *
 from networks import DQN
@@ -46,12 +48,10 @@ class Agent:
             return self.nn(state).cpu().detach().argmax().item()
 
     def target(self, state):
-        state_action = torch.cat([state], -1)
-        return self.target_nn(state_action)
+        return self.target_nn(state)
 
     def __call__(self, state):
-        state_action = torch.cat([state], -1)
-        return self.nn(state_action)
+        return self.nn(state)
 
 
 class Model:
@@ -62,6 +62,7 @@ class Model:
         self.config = config
         self.device = device
         self.memory = NStepsReplayMemory(self.config['MEMORY_SIZE'], self.config['N_STEP'], self.config['GAMMA'])
+        self.eval_env = gym.make(self.config['GAME'])
 
         self.state_size = state_size
         self.action_size = action_size
@@ -70,8 +71,8 @@ class Model:
 
         # Compute gamma^n for n-steps return
         self.gamma_n = self.config["GAMMA"]**self.config['N_STEP']
- 
-    def select_action(self, state, episode, evaluation=False):
+
+    def select_action(self, state, episode=None, evaluation=False):
         if evaluation or random.random() > get_epsilon_threshold(episode, self.config):
             return self.agent.select_action(state)
         else:
@@ -89,7 +90,8 @@ class Model:
         else:
             return torch.tensor([reward], device=self.device)
 
-    def optimize_model(self):
+    def optimize(self):
+
         if len(self.memory) < self.config['BATCH_SIZE']:
             return
 
@@ -103,7 +105,7 @@ class Model:
         done = torch.FloatTensor(batch[4]).unsqueeze(1).to(self.device)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the columns of actions taken
-        current_Q = self.agent.nn(states).gather(1, actions.unsqueeze(1))
+        current_Q = self.agent(states).gather(1, actions.unsqueeze(1))
 
         if self.config['DOUBLE_DQN']:
             # ========================== DOUBLE DQN ===============================
@@ -112,21 +114,17 @@ class Model:
 
             # Compute Q_target(s_{t+1}, argmax_a Q(s_{t+1}, a)) for a double DQN
             next_Q = self.agent.target(next_states).gather(1, next_actions)
-
-            # Compute the expected Q values : y[i]= r[i] + gamma * Q'(s[i+1], a[i+1])
-            target_Q = rewards + done * self.gamma_n * next_Q
             # =====================================================================
 
         else:
             # ============================== DQN ==================================
-            # Compute Q(s_{t+1}) for all next states and select the max 
+            # Compute Q(s_{t+1}) for all next states and select the max
             next_Q = self.agent.target(next_states).max(1)[0].unsqueeze(1)
-
-            # Compute the expected Q values : y[i]= r[i] + gamma * Q'(s[i+1], a[i+1])
-            target_Q = rewards + done * self.gamma_n * next_Q
             # =====================================================================
 
-        # Compute Huber loss
+        # Compute the expected Q values : y[i]= r[i] + gamma * Q'(s[i+1], a[i+1])
+        target_Q = rewards + done * self.gamma_n * next_Q
+
         loss = F.mse_loss(current_Q, target_Q)
 
         # Optimize the model
@@ -134,6 +132,31 @@ class Model:
 
         return loss.item()
 
+    def evaluate(self, n_ep=10, render=False):
+        rewards = []
+        try:
+            for i in range(n_ep):
+                state = self.eval_env.reset()
+                reward = 0
+                done = False
+                steps = 0
+                while not done and steps < self.config["MAX_STEPS"]:
+                    action = self.select_action(state, evaluation=True)
+                    state, r, done, _ = self.eval_env.step(action)
+                    if render:
+                        self.eval_env.render()
+                    reward += r
+                    steps += 1
+                rewards.append(reward)
+
+        except KeyboardInterrupt:
+            pass
+
+        finally:
+            self.eval_env.close()
+
+        score = sum(rewards)/len(rewards) if rewards else 0
+        return score
 
     def save(self):
         self.agent.save(self.folder)

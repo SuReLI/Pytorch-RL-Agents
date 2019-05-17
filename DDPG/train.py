@@ -24,25 +24,25 @@ with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 parser = argparse.ArgumentParser(description='Run DDPG on ' + config["GAME"])
-parser.add_argument('--no-gpu', action='store_true', dest='no_gpu', help="Don't use GPU")
+parser.add_argument('--no_gpu', action='store_false', dest='gpu', help="Don't use GPU")
 args = parser.parse_args()
 
 # Create folder and writer to write tensorboard values
 current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-expe_name = f'runs/{config["GAME"].split("-")[0]}_{current_time}'
-writer = SummaryWriter(expe_name)
-if not os.path.exists(expe_name+'/models/'):
-    os.mkdir(expe_name+'/models/')
+folder = f'runs/{config["GAME"].split("-")[0]}_{current_time}'
+writer = SummaryWriter(folder)
+if not os.path.exists(folder+'/models/'):
+    os.mkdir(folder+'/models/')
 
 # Write optional info about the experiment to tensorboard
 for k, v in config.items():
     writer.add_text('Config', str(k) + ' : ' + str(v), 0)
 
-with open(expe_name+'/config.yaml', 'w') as file:
+with open(folder+'/config.yaml', 'w') as file:
     yaml.dump(config, file)
 
 # Choose device cpu or cuda if a gpu is available
-if not args.no_gpu and torch.cuda.is_available():
+if not args.gpu and torch.cuda.is_available():
     device = 'cuda'
 else:
     device = 'cpu'
@@ -64,7 +64,7 @@ ACTION_SIZE = env.action_space.shape[0]
 def train():
 
     print("Creating neural networks and optimizers...")
-    model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, expe_name, config)
+    model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, folder, config)
 
     nb_total_steps = 0
     time_beginning = time.time()
@@ -92,7 +92,7 @@ def train():
                 next_state, reward, done, _ = env.step(action)
                 episode_reward += reward
 
-                if not done and step == config["MAX_STEPS"] - 1:
+                if not done and step == config["MAX_STEPS"]-1:
                     done = True
 
                 # Save transition into memory
@@ -111,10 +111,10 @@ def train():
                 writer.add_scalar('loss/actor_loss', actor_loss, episode)
                 writer.add_scalar('loss/critic_loss', critic_loss, episode)
 
-            if nb_episodes % 25 == 0:
+            if nb_episodes % config["FREQ_PLOT"] == 0:
                 plt.cla()
                 plt.plot(rewards)
-                plt.savefig(expe_name+'/rewards.png')
+                plt.savefig(folder+'/rewards.png')
 
             nb_episodes += 1
 
@@ -125,7 +125,7 @@ def train():
         env.close()
         writer.close()
         model.save()
-        print("\033[91m\033[1mModel saved in", expe_name, "\033[0m")
+        print("\033[91m\033[1mModel saved in", folder, "\033[0m")
 
     time_execution = time.time() - time_beginning
 

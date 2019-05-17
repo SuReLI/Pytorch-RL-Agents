@@ -1,6 +1,8 @@
 import sys
 sys.path.extend(["../commons/"])
 
+import gym
+
 import torch
 import torch.nn.functional as F
 
@@ -16,6 +18,7 @@ class Model:
         self.config = config
         self.device = device
         self.memory = ReplayMemory(config["MEMORY_CAPACITY"])
+        self.eval_env = gym.make(self.config["GAME"])
 
         self.state_size = state_size
         self.action_size = action_size
@@ -90,24 +93,30 @@ class Model:
             return None, loss_critic_A.item()
 
     def evaluate(self, n_ep=10, render=False):
+        rewards = []
+        try:
+            for i in range(n_ep):
+                state = self.eval_env.reset()
+                reward = 0
+                done = False
+                steps = 0
+                while not done and steps < self.config["MAX_STEPS"]:
+                    action = self.select_action(state)
+                    state, r, done, _ = self.eval_env.step(action)
+                    if render:
+                        self.eval_env.render()
+                    reward += r
+                    steps += 1
+                rewards.append(reward)
 
-        rewards = [0]*n_ep
+        except KeyboardInterrupt:
+            pass
 
-        for ep in range(n_ep):
+        finally:
+            self.eval_env.close()
 
-            state = self.eval_env.reset()
-            done = False
-            step = 0
-            while not done and step < self.config["MAX_STEPS"]:
-
-                action = self.select_action(state)
-                state, r, done, _ = self.eval_env.step(action)
-                if render:
-                    self.eval_env.render()
-                rewards[ep] += r
-                step += 1
-
-        return sum(rewards) / n_ep
+        score = sum(rewards)/len(rewards) if rewards else 0
+        return score
 
     def save(self):
         self.actor.save(self.folder)

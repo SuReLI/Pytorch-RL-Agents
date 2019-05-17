@@ -7,7 +7,6 @@ try:
 except ModuleNotFoundError:
     trange = range
 
-import numpy as np
 import matplotlib.pyplot as plt
 import gym
 import yaml
@@ -25,7 +24,7 @@ with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 parser = argparse.ArgumentParser(description='Run DQN on ' + config["GAME"])
-parser.add_argument('--gpu', help='Use GPU', action='store_true')
+parser.add_argument('--no_gpu', action='store_false', dest='gpu', help="Don't use GPU")
 args = parser.parse_args()
 
 # Create folder and writer to write tensorboard values
@@ -37,7 +36,7 @@ if not os.path.exists(folder+'/models/'):
 
 # Write optional info about the experiment to tensorboard
 for k, v in config.items():
-    writer.add_text('Config',  str(k) + ' : ' + str(v), 0)
+    writer.add_text('Config', str(k) + ' : ' + str(v), 0)
 
 with open(folder+'/config.yaml', 'w') as file:
     yaml.dump(config, file)
@@ -59,6 +58,7 @@ env = gym.make(config["GAME"])
 STATE_SIZE = env.observation_space.shape[0]
 ACTION_SIZE = env.action_space.n
 
+
 def train():
 
     print("Creating neural networks and optimizers...")
@@ -71,10 +71,8 @@ def train():
         print("Starting training...")
         nb_episodes_done = 0
         rewards = []
-        steps_per_sec = []
 
-        for episode in range(config['MAX_EPISODES']) :
-            time_beginning_ep = time.time()
+        for episode in trange(config['MAX_EPISODES']):
 
             # Initialize the environment and state
             state = env.reset()
@@ -82,7 +80,7 @@ def train():
             done = False
             step = 0
 
-            while step <= config['MAX_TIMESTEPS'] and not done:
+            while step <= config['MAX_STEPS'] and not done:
 
                 # Select and perform an action
                 action = model.select_action(state, episode)
@@ -90,17 +88,14 @@ def train():
                 reward = model.intermediate_reward(reward, next_state)
                 episode_reward += reward.item()
 
-                if not done and step == config['MAX_TIMESTEPS']:
+                if not done and step == config['MAX_STEPS']-1:
                     done = True
 
                 # Store the transition in memory
                 model.memory.push(state, action, reward, next_state, 1-int(done))
-
-                # Move to the next state
                 state = next_state
 
-                # Perform one step of the optimization (on the target network)
-                loss = model.optimize_model()
+                loss = model.optimize()
 
                 step += 1
                 nb_total_steps += 1
@@ -108,8 +103,9 @@ def train():
             rewards.append(episode_reward)
 
             # Update the target network
-            if episode % model.config['TARGET_UPDATE'] == 0:
+            if episode % config['TARGET_UPDATE'] == 0:
                 utils.update_targets(model.agent.target_nn, model.agent.nn, model.config['TAU'])
+
             nb_episodes_done += 1
 
             # Write scalars to tensorboard
@@ -118,15 +114,8 @@ def train():
             if loss is not None:
                 writer.add_scalar('loss', loss, episode)
 
-            # Write info to terminal
-            steps_per_sec.append(round(step/(time.time() - time_beginning_ep),3))
-            if episode % 100 == 0 :
-                print(f'Episode {episode}, Reward: {round(episode_reward, 2)}, '
-                      f'Steps: {step}, Epsilon: {utils.get_epsilon_threshold(nb_episodes_done, model.config):.5}, '
-                      f'LR: {model.agent.optimizer.param_groups[0]["lr"]:.4f}, Speed : {round(sum(steps_per_sec[-20:])/20,1) } steps/s')
-
-            # Stores .png of the reward graph 
-            if nb_episodes_done % 25 == 0:
+            # Stores .png of the reward graph
+            if nb_episodes_done % config["FREQ_PLOT"] == 0:
                 plt.cla()
                 plt.plot(rewards)
                 plt.savefig(folder+'/rewards.png')
@@ -135,6 +124,8 @@ def train():
         pass
 
     finally:
+        env.close()
+        writer.close()
         model.save()
         print("\n\033[91m\033[1mModel saved in", folder, "\033[0m")
 
@@ -146,8 +137,6 @@ def train():
           'Execution time : ', round(time_execution, 2), ' seconds\n'
           'Average nb of steps per second : ', round(nb_total_steps/time_execution, 3), 'steps/s\n'
           'Average duration of one episode : ', round(time_execution/nb_episodes_done, 3), 's\n')
-
-    writer.close()
 
 
 if __name__ == '__main__':

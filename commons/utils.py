@@ -84,13 +84,23 @@ def convert_name(title):
     return datetime.datetime.strptime(date, '%Y-%m-%d_%H-%M-%S')
 
 
+def is_valid(title):
+    try:
+        convert_name(title)
+        return True
+    except (IndexError, ValueError):
+        return False
+
+
 def get_latest_dir(folder):
     dirs = os.listdir(folder)
+
+    dirs = list(filter(is_valid, dirs))
     dirs.sort(key=convert_name)
     if len(dirs) > 0:
         return dirs[-1]
     else:
-        return ''
+        raise FileNotFoundError("No valid file in the folder runs/ !")
 
 
 def sample_to_str(transition):
