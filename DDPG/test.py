@@ -17,6 +17,8 @@ default_dir = 'runs/' + get_latest_dir('runs/')
 parser = argparse.ArgumentParser(description='Test DDPG on ' + config["GAME"])
 parser.add_argument('--render', action='store_true', dest="render",
                     help='Display the tests')
+parser.add_argument('--gif', action='store_true', dest="gif",
+                    help='Save a gif of a test')
 parser.add_argument('-n', '--nb_tests', default=10, type=int, dest="nb_tests",
                     help="Number of evaluation to perform.")
 parser.add_argument('-f', '--folder', default=default_dir, type=str, dest="folder",
@@ -38,12 +40,19 @@ ACTION_SIZE = env.action_space.shape[0]
 model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, args.folder, config)
 model.load()
 
+number_tests = args.nb_tests
+
+if args.gif :
+    import imageio
+    writer = imageio.get_writer(default_dir+ '/' + config['GAME'] + '.gif', fps=30)
+    number_tests = 1
+
 # START EVALUATION
 
 try:
     rewards = []
 
-    for ep in range(args.nb_tests):
+    for ep in range(number_tests):
 
         state = env.reset()
         done = False
@@ -54,6 +63,8 @@ try:
             state, r, done, _ = env.step(action)
             if args.render:
                 env.render()
+            if args.gif :
+                writer.append_data(env.render(mode='rgb_array'))
             reward += r
 
         rewards.append(reward)
@@ -63,5 +74,8 @@ except KeyboardInterrupt:
 
 finally:
     env.close()
+
+    if args.gif :
+        writer.close()
 
 print("Average reward : ", sum(rewards) / args.nb_tests)
