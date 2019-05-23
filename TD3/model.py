@@ -7,7 +7,7 @@ import gym
 import torch
 import torch.nn.functional as F
 
-from utils import ReplayMemory, update_targets
+from utils import ReplayMemory
 from networks import Actor, Critic
 
 
@@ -83,10 +83,10 @@ class Model:
 
             self.actor.update(loss_actor, grad_clipping=False)
 
-            update_targets(self.actor.target_nn, self.actor.nn, self.config["TAU"])
+            self.actor.update_target(self.config["TAU"])
 
-            update_targets(self.critic_A.target_nn, self.critic_A.nn, self.config["TAU"])
-            update_targets(self.critic_B.target_nn, self.critic_B.nn, self.config["TAU"])
+            self.critic_A.update_target(self.config["TAU"])
+            self.critic_B.update_target(self.config["TAU"])
 
             return loss_actor.item(), loss_critic_A.item()
 

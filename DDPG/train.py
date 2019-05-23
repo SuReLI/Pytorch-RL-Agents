@@ -1,6 +1,6 @@
 import os
+import signal
 import time
-from datetime import datetime
 import argparse
 try:
     from tqdm import trange
@@ -16,6 +16,7 @@ import torch
 from tensorboardX import SummaryWriter
 
 from model import Model
+from utils import get_current_time
 
 
 print("DDPG starting...")
@@ -23,13 +24,12 @@ print("DDPG starting...")
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
-parser = argparse.ArgumentParser(description='Run DDPG on ' + config["GAME"])
+parser = argparse.ArgumentParser(description='Run DDPG')
 parser.add_argument('--no_gpu', action='store_false', dest='gpu', help="Don't use GPU")
 args = parser.parse_args()
 
 # Create folder and writer to write tensorboard values
-current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-folder = f'runs/{config["GAME"].split("-")[0]}_{current_time}'
+folder = f'runs/{config["GAME"].split("-")[0]}_{get_current_time()}'
 writer = SummaryWriter(folder)
 if not os.path.exists(folder+'/models/'):
     os.mkdir(folder+'/models/')
@@ -65,6 +65,11 @@ def train():
 
     print("Creating neural networks and optimizers...")
     model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, folder, config)
+
+    def handler(sig, frame):
+        model.evaluate(n_ep=1, render=True)
+
+    signal.signal(signal.SIGTSTP, handler)
 
     nb_total_steps = 0
     time_beginning = time.time()

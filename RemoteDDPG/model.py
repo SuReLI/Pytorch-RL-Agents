@@ -7,7 +7,7 @@ import threading
 import torch
 import torch.nn.functional as F
 
-from utils import update_targets, str_to_list
+from utils import str_to_list
 from networks import Actor, Critic
 
 
@@ -97,8 +97,8 @@ class Model:
         self.actor.update(loss_actor)
 
         # Soft parameter update
-        update_targets(self.critic.target_nn, self.critic.nn, self.config["TAU"])
-        update_targets(self.actor.target_nn, self.actor.nn, self.config["TAU"])
+        self.critic.update_target(self.config["TAU"])
+        self.actor.update_target(self.config["TAU"])
 
         return loss_actor.item(), loss_critic.item()
 

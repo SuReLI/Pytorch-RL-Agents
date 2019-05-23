@@ -1,4 +1,5 @@
 import os
+import signal
 import time
 from datetime import datetime
 import argparse
@@ -15,8 +16,8 @@ import torch
 from tensorboardX import SummaryWriter
 
 from model import Model
+from utils import get_current_time
 
-import utils
 
 print("DQN starting...")
 
@@ -28,8 +29,7 @@ parser.add_argument('--no_gpu', action='store_false', dest='gpu', help="Don't us
 args = parser.parse_args()
 
 # Create folder and writer to write tensorboard values
-current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-folder = f'runs/{config["GAME"].split("-")[0]}_{current_time}'
+folder = f'runs/{config["GAME"].split("-")[0]}_{get_current_time()}'
 writer = SummaryWriter(folder)
 if not os.path.exists(folder+'/models/'):
     os.mkdir(folder+'/models/')
@@ -63,6 +63,11 @@ def train():
 
     print("Creating neural networks and optimizers...")
     model = Model(device, STATE_SIZE, ACTION_SIZE, folder, config)
+
+    def handler(sig, frame):
+        model.evaluate(n_ep=1, render=True)
+
+    signal.signal(signal.SIGTSTP, handler)
 
     nb_total_steps = 0
     time_beginning = time.time()
@@ -101,10 +106,6 @@ def train():
                 nb_total_steps += 1
 
             rewards.append(episode_reward)
-
-            # Update the target network
-            if episode % config['TARGET_UPDATE'] == 0:
-                utils.update_targets(model.agent.target_nn, model.agent.nn, model.config['TAU'])
 
             nb_episodes_done += 1
 

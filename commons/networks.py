@@ -52,6 +52,51 @@ class ActorNetwork(nn.Module):
         return (x * (self.high_bound - self.low_bound)) + self.low_bound
 
 
+class Agent:
+    def __init__(self, state_size, action_size, device, config):
+        self.device = device
+        self.config = config
+
+        self.nn = DQN(state_size, action_size).to(self.device)
+        self.target_nn = DQN(state_size, action_size).to(self.device)
+        self.target_nn.load_state_dict(self.nn.state_dict())
+
+        self.optimizer = optim.Adam(self.nn.parameters(), lr=config['LEARNING_RATE'])
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, config['STEP_LR'], config['GAMMA_LR'])
+
+    def update(self, loss, grad_clipping=True):
+        self.optimizer.zero_grad()
+        loss.backward()
+        if self.config['GRAD_CLAMPING']:
+            for param in self.nn.parameters():
+                param.grad.data.clamp_(-1, 1)
+        self.optimizer.step()
+        self.scheduler.step()
+
+    def update_target(self, tau):
+        for target_param, nn_param in zip(self.target_nn.parameters(), self.nn.parameters()):
+            target_param.data.copy_((1-tau)*target_param.data + tau*nn_param.data)
+
+    def save(self, folder):
+        torch.save(self.nn.state_dict(), folder+'/models/dqn.pth')
+        torch.save(self.target_nn.state_dict(), folder+'/models/dqn_target.pth')
+
+    def load(self, folder):
+        self.nn.load_state_dict(torch.load(folder+'/models/dqn.pth', map_location='cpu'))
+        self.target_nn.load_state_dict(torch.load(folder+'/models/dqn_target.pth', map_location='cpu'))
+
+    def select_action(self, state):
+        with torch.no_grad():
+            state = torch.FloatTensor(state).to(self.device)
+            return self.nn(state).cpu().detach().argmax().item()
+
+    def target(self, state):
+        return self.target_nn(state)
+
+    def __call__(self, state):
+        return self.nn(state)
+
+
 class Critic:
     def __init__(self, state_size, action_size, device, config):
         self.device = device
@@ -69,6 +114,10 @@ class Critic:
             for param in self.nn.parameters():
                 param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
+
+    def update_target(self, tau):
+        for target_param, nn_param in zip(self.target_nn.parameters(), self.nn.parameters()):
+            target_param.data.copy_((1-tau)*target_param.data + tau*nn_param.data)
 
     def save(self, folder):
         torch.save(self.nn.state_dict(), folder+'/models/critic.pth')
@@ -106,6 +155,10 @@ class Actor:
             for param in self.nn.parameters():
                 param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
+
+    def update_target(self, tau):
+        for target_param, nn_param in zip(self.target_nn.parameters(), self.nn.parameters()):
+            target_param.data.copy_((1-tau)*target_param.data + tau*nn_param.data)
 
     def save(self, folder):
         torch.save(self.nn.state_dict(), folder+'/models/actor.pth')

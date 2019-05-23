@@ -70,11 +70,6 @@ def get_epsilon_threshold(episodes, params):
         math.exp(-1 * episodes / params['EPSILON_DECAY'])
 
 
-def update_targets(target, original, tau):
-    for targetParam, orgParam in zip(target.parameters(), original.parameters()):
-        targetParam.data.copy_((1 - tau)*targetParam.data + tau*orgParam.data)
-
-
 def str_to_list(string):
     return list(map(float, string[1:-1].split(', ')))
 
@@ -101,6 +96,10 @@ def get_latest_dir(folder):
         return dirs[-1]
     else:
         raise FileNotFoundError("No valid file in the folder runs/ !")
+
+
+def get_current_time():
+    return datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
 
 def sample_to_str(transition):

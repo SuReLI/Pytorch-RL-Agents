@@ -6,53 +6,10 @@ import imageio
 import gym
 
 import torch
-import torch.optim as optim
 import torch.nn.functional as F
-from torch.optim import lr_scheduler
 
-from utils import *
-from networks import DQN
-
-
-class Agent:
-    def __init__(self, state_size, action_size, device, config):
-        self.device = device
-        self.config = config
-
-        self.nn = DQN(state_size, action_size).to(self.device)
-        self.target_nn = DQN(state_size, action_size).to(self.device)
-        self.target_nn.load_state_dict(self.nn.state_dict())
-
-        self.optimizer = optim.Adam(self.nn.parameters(), lr=config['LEARNING_RATE'])
-        self.scheduler = lr_scheduler.StepLR(self.optimizer, config['STEP_LR'], config['GAMMA_LR'])
-
-    def update(self, loss, grad_clipping=True):
-        self.optimizer.zero_grad()
-        loss.backward()
-        if self.config['GRAD_CLAMPING']:
-            for param in self.nn.parameters():
-                param.grad.data.clamp_(-1, 1)
-        self.optimizer.step()
-        self.scheduler.step()
-
-    def save(self, folder):
-        torch.save(self.nn.state_dict(), folder+'/models/dqn.pth')
-        torch.save(self.target_nn.state_dict(), folder+'/models/dqn_target.pth')
-
-    def load(self, folder):
-        self.nn.load_state_dict(torch.load(folder+'/models/dqn.pth', map_location='cpu'))
-        self.target_nn.load_state_dict(torch.load(folder+'/models/dqn_target.pth', map_location='cpu'))
-
-    def select_action(self, state):
-        with torch.no_grad():
-            state = torch.FloatTensor(state).to(self.device)
-            return self.nn(state).cpu().detach().argmax().item()
-
-    def target(self, state):
-        return self.target_nn(state)
-
-    def __call__(self, state):
-        return self.nn(state)
+from networks import Agent
+from utils import NStepsReplayMemory, get_epsilon_threshold
 
 
 class Model:
@@ -130,6 +87,8 @@ class Model:
 
         # Optimize the model
         self.agent.update(loss)
+
+        self.agent.update_target(self.config["TAU"])
 
         return loss.item()
 
