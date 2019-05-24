@@ -127,8 +127,10 @@ class Model:
     def save(self):
         self.agent.save(self.folder)
 
-    def load(self):
+    def load(self, folder=None):
+        if folder is None:
+            folder = self.folder
         try:
-            self.agent.load(self.folder)
+            self.agent.load(folder)
         except FileNotFoundError:
             raise Exception("No model has been saved !") from None

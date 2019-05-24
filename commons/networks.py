@@ -78,12 +78,12 @@ class Agent:
             target_param.data.copy_((1-tau)*target_param.data + tau*nn_param.data)
 
     def save(self, folder):
-        torch.save(self.nn.state_dict(), folder+'/models/dqn.pth')
-        torch.save(self.target_nn.state_dict(), folder+'/models/dqn_target.pth')
+        torch.save(self.nn.state_dict(), os.path.join(folder, 'models/dqn.pth'))
+        torch.save(self.target_nn.state_dict(), os.path.join(folder, 'models/dqn_target.pth'))
 
     def load(self, folder):
-        self.nn.load_state_dict(torch.load(folder+'/models/dqn.pth', map_location='cpu'))
-        self.target_nn.load_state_dict(torch.load(folder+'/models/dqn_target.pth', map_location='cpu'))
+        self.nn.load_state_dict(torch.load(os.path.join(folder, 'models/dqn.pth'), map_location='cpu'))
+        self.target_nn.load_state_dict(torch.load(os.path.join(folder, 'models/dqn_target.pth'), map_location='cpu'))
 
     def select_action(self, state):
         with torch.no_grad():
@@ -120,13 +120,13 @@ class Critic:
             target_param.data.copy_((1-tau)*target_param.data + tau*nn_param.data)
 
     def save(self, folder):
-        torch.save(self.nn.state_dict(), folder+'/models/critic.pth')
-        torch.save(self.target_nn.state_dict(), folder+'/models/critic_target.pth')
+        torch.save(self.nn.state_dict(), os.path.join(folder, 'models/critic.pth'))
+        torch.save(self.target_nn.state_dict(), os.path.join(folder, 'models/critic_target.pth'))
 
     def load(self, folder):
-        self.nn.load_state_dict(torch.load(folder+'/models/critic.pth',
+        self.nn.load_state_dict(torch.load(os.path.join(folder, 'models/critic.pth'),
                                            map_location=self.device))
-        self.target_nn.load_state_dict(torch.load(folder+'/models/critic_target.pth',
+        self.target_nn.load_state_dict(torch.load(os.path.join(folder, 'models/critic_target.pth'),
                                                   map_location=self.device))
 
     def target(self, state, action):
@@ -161,13 +161,13 @@ class Actor:
             target_param.data.copy_((1-tau)*target_param.data + tau*nn_param.data)
 
     def save(self, folder):
-        torch.save(self.nn.state_dict(), folder+'/models/actor.pth')
-        torch.save(self.target_nn.state_dict(), folder+'/models/actor_target.pth')
+        torch.save(self.nn.state_dict(), os.path.join(folder, 'models/actor.pth'))
+        torch.save(self.target_nn.state_dict(), os.path.join(folder, 'models/actor_target.pth'))
 
     def load(self, folder):
-        self.nn.load_state_dict(torch.load(folder+'/models/actor.pth',
+        self.nn.load_state_dict(torch.load(os.path.join(folder, 'models/actor.pth'),
                                            map_location=self.device))
-        self.target_nn.load_state_dict(torch.load(folder+'/models/actor_target.pth',
+        self.target_nn.load_state_dict(torch.load(os.path.join(folder, 'models/actor_target.pth'),
                                                   map_location=self.device))
 
     def select_action(self, state):

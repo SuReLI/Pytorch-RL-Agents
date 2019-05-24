@@ -113,9 +113,11 @@ class Model:
         self.actor.save(self.folder)
         self.critic.save(self.folder)
 
-    def load(self):
+    def load(self, folder=None):
+        if folder is None:
+            folder = self.folder
         try:
-            self.actor.load(self.folder)
-            self.critic.load(self.folder)
+            self.actor.load(folder)
+            self.critic.load(folder)
         except FileNotFoundError:
             raise Exception("No model has been saved !") from None

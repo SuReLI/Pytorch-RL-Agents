@@ -1,7 +1,6 @@
 import os
 import signal
 import time
-from datetime import datetime
 import argparse
 try:
     from tqdm import trange
@@ -26,7 +25,13 @@ with open('config.yaml', 'r') as file:
 
 parser = argparse.ArgumentParser(description='Run DQN on ' + config["GAME"])
 parser.add_argument('--no_gpu', action='store_false', dest='gpu', help="Don't use GPU")
+parser.add_argument('--load', dest='load', type=str, help="Load model")
 args = parser.parse_args()
+
+
+if args.load:
+    with open(args.load+'/config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
 
 # Create folder and writer to write tensorboard values
 folder = f'runs/{config["GAME"].split("-")[0]}_{get_current_time()}'
@@ -63,6 +68,8 @@ def train():
 
     print("Creating neural networks and optimizers...")
     model = Model(device, STATE_SIZE, ACTION_SIZE, folder, config)
+    if args.load:
+        model.load(args.load)
 
     def handler(sig, frame):
         model.evaluate(n_ep=1, render=True)
