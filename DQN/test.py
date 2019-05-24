@@ -5,6 +5,10 @@ import os
 import argparse
 import yaml
 import gym
+try:
+    import roboschool
+except ModuleNotFoundError:
+    pass
 import torch
 
 from model import Model

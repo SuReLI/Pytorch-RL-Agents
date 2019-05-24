@@ -7,9 +7,13 @@ try:
 except ModuleNotFoundError:
     trange = range
 
+import gym
+try:
+    import roboschool
+except ModuleNotFoundError:
+    pass
 import numpy as np
 import matplotlib.pyplot as plt
-import gym
 import yaml
 
 import torch

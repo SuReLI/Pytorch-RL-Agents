@@ -4,6 +4,10 @@ sys.path.extend(["../commons/"])
 import random
 import imageio
 import gym
+try:
+    import roboschool
+except ModuleNotFoundError:
+    pass
 
 import torch
 import torch.nn.functional as F
