@@ -113,9 +113,6 @@ def train():
                 next_state, reward, done, _ = env.step(action)
                 episode_reward += reward
 
-                if not done and step == config["MAX_STEPS"]-1:
-                    done = True
-
                 # Save transition into memory
                 model.memory.push(state, action, reward, next_state, 1-int(done))
                 state = next_state
