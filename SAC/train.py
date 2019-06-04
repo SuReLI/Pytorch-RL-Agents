@@ -12,7 +12,6 @@ try:
     import roboschool
 except ModuleNotFoundError:
     pass
-import numpy as np
 import matplotlib.pyplot as plt
 import yaml
 
@@ -76,7 +75,7 @@ def train():
     # Signal to render evaluation during training by pressing CTRL+Z
     def handler(sig, frame):
         model.evaluate(n_ep=1, render=True)
-    signal.signal(signal.SIGTSTP, handler)    
+    signal.signal(signal.SIGTSTP, handler)
 
     nb_total_steps = 0
     time_beginning = time.time()
@@ -135,7 +134,6 @@ def train():
                 plt.savefig(folder + '/lenghts.png')
 
             nb_episodes += 1
-
 
     except KeyboardInterrupt:
         pass
