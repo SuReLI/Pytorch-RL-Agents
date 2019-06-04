@@ -1,7 +1,8 @@
 import os
 import datetime
 import random
-
+import gym
+import numpy as np
 import math
 from collections import deque
 
@@ -62,6 +63,26 @@ class NStepsReplayMemory:
 
     def __len__(self):
         return len(self.memory)
+
+
+class NormalizedActions(gym.ActionWrapper):
+    def action(self, action):
+        low = self.action_space.low
+        high = self.action_space.high
+
+        action = low + (action + 1.0) * 0.5 * (high - low)
+        action = np.clip(action, low, high)
+
+        return action
+
+    def reverse_action(self, action):
+        low = self.action_space.low
+        high = self.action_space.high
+
+        action = 2 * (action - low) / (high - low) - 1
+        action = np.clip(action, low, high)
+
+        return action
 
 
 def get_epsilon_threshold(episodes, params):

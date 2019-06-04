@@ -1,12 +1,13 @@
-import imageio
-import torch
-import gym
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import numpy as np
+import sys
+sys.path.extend(["../commons/"])
 
-from networks import ValueNetwork, SoftQNetwork, PolicyNetwork
+import imageio
+import gym
+
+import torch
+
 from utils import ReplayMemory, NormalizedActions
+from networks import ValueNetwork, SoftQNetwork, PolicyNetwork
 
 
 class Model:
