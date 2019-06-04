@@ -5,6 +5,7 @@ import imageio
 import gym
 
 import torch
+import numpy as np
 
 from utils import ReplayMemory, NormalizedActions
 from networks import ValueNetwork, SoftQNetwork, PolicyNetwork
