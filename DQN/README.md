@@ -14,9 +14,6 @@ The configuration of your experiement must be specified in the ```config.yaml```
 
 To train an agent to play, simply run : ```python3 train.py```.
 
-Options :
-* ```--gpu``` : If available, the GPU will be used for computation.
-
 The models will be saved in a folder in ```runs/```.
 
 ## Visualizing the training
@@ -32,6 +29,6 @@ You can use Tensorboard to visualize the evolution of the training in real time 
 To test the performance of a trained agent, run ```python3 test.py```.
 
 Options :
-* ```--gpu``` : If available, the GPU will be used for computation.
-* ```--render``` : The tests will be graphically displayed.
+* ```--no_render``` : The tests will not be graphically displayed.
 * ```-n X``` : Specify the number X of episodes you want to play.
+* ```--gif``` : A gif of the test will be saved.s

@@ -122,6 +122,10 @@ def train():
             lenghts.append(step)
 
             if episode % config["FREQ_PLOT"] == 0:
+                writer.add_scalar('rewards', episode_reward, episode)
+                writer.add_scalar('eval_rewards', eval_rewards[-1], episode)
+                writer.add_scalar('len_episode', lenghts[-1], episode)
+
                 plt.cla()
                 plt.plot(rewards)
                 plt.savefig(folder + '/rewards.png')
