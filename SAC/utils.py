@@ -56,3 +56,6 @@ def get_latest_dir(folder):
         return dirs[-1]
     else:
         return ''
+
+def get_current_time():
+    return datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')

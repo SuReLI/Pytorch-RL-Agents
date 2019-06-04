@@ -11,18 +11,22 @@ from utils import ReplayMemory, NormalizedActions
 
 class Model:
 
-    def __init__(self, state_size, action_size, device, folder, config):
+    def __init__(self, device, folder, config):
+
         self.folder = folder
         self.config = config
         self.device = device
-        self.eval_env = NormalizedActions(gym.make(self.config["GAME"]))
         self.memory = ReplayMemory(self.config["MEMORY_CAPACITY"])
+        self.eval_env = NormalizedActions(gym.make(self.config["GAME"]))
 
-        self.value_net = ValueNetwork(state_size, self.config["HIDDEN_SIZE"]).to(device)
-        self.target_value_net = ValueNetwork(state_size, self.config["HIDDEN_SIZE"]).to(device)
-        self.soft_Q_net1 = SoftQNetwork(state_size, action_size, self.config["HIDDEN_SIZE"]).to(device)
-        self.soft_Q_net2 = SoftQNetwork(state_size, action_size, self.config["HIDDEN_SIZE"]).to(device)
-        self.soft_actor = PolicyNetwork(state_size, action_size, self.config["HIDDEN_SIZE"], device).to(device)
+        self.state_size = self.eval_env.observation_space.shape[0]
+        self.action_size = self.eval_env.action_space.shape[0]
+
+        self.value_net = ValueNetwork(self.state_size, self.config["HIDDEN_SIZE"]).to(device)
+        self.target_value_net = ValueNetwork(self.state_size, self.config["HIDDEN_SIZE"]).to(device)
+        self.soft_Q_net1 = SoftQNetwork(self.state_size, self.action_size, self.config["HIDDEN_SIZE"]).to(device)
+        self.soft_Q_net2 = SoftQNetwork(self.state_size, self.action_size, self.config["HIDDEN_SIZE"]).to(device)
+        self.soft_actor = PolicyNetwork(self.state_size, self.action_size, self.config["HIDDEN_SIZE"], device).to(device)
 
         for target_param, param in zip(self.target_value_net.parameters(), self.value_net.parameters()):
             target_param.data.copy_(param.data)
@@ -49,6 +53,7 @@ class Model:
         transitions = self.memory.sample(self.config["BATCH_SIZE"])
         states, actions, rewards, next_states, done = list(zip(*transitions))
 
+        # Divide memory into different tensors
         states = torch.FloatTensor(states).to(self.device)
         actions = torch.FloatTensor(actions).to(self.device)
         rewards = torch.FloatTensor(rewards).unsqueeze(1).to(self.device)
@@ -60,13 +65,13 @@ class Model:
         current_V = self.value_net(states)
         new_actions, log_prob = self.soft_actor.evaluate(states)
 
+        # Compute the next value of alpha
         if self.config["AUTO_ALPHA"]:
             alpha_loss = -(self.log_alpha * (log_prob + self.target_entropy).detach()).mean()
             self.alpha_optimizer.zero_grad()
             alpha_loss.backward()
             self.alpha_optimizer.step()
             alpha = self.log_alpha.exp()
-
         else:
             alpha = 0.2
 
