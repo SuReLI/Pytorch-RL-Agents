@@ -17,7 +17,7 @@ from networks import Actor, Critic
 
 class Model:
 
-    def __init__(self, device, state_size, action_size, low_bound, high_bound, folder, config):
+    def __init__(self, device, folder, config):
 
         self.folder = folder
         self.config = config
@@ -25,15 +25,13 @@ class Model:
         self.memory = ReplayMemory(self.config["MEMORY_CAPACITY"])
         self.eval_env = gym.make(self.config["GAME"])
 
-        self.state_size = state_size
-        self.action_size = action_size
-        self.low_bound = low_bound
-        self.high_bound = high_bound
+        self.state_size = self.eval_env.observation_space.shape[0]
+        self.action_size = self.eval_env.action_space.shape[0]
+        self.low_bound = int(self.eval_env.action_space.low[0])
+        self.high_bound = int(self.eval_env.action_space.high[0])
 
         self.critic = Critic(state_size, action_size, device, self.config)
         self.actor = Actor(state_size, action_size, low_bound, high_bound, device, self.config)
-
-        self.eval_env = gym.make(self.config["GAME"])
 
     def select_action(self, state):
         return self.actor.select_action(state)

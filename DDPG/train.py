@@ -48,6 +48,7 @@ if not os.path.exists(folder+'/models/'):
 for k, v in config.items():
     writer.add_text('Config', str(k) + ' : ' + str(v), 0)
 
+# Write a yaml config file in the saving folder
 with open(folder+'/config.yaml', 'w') as file:
     yaml.dump(config, file)
 
@@ -67,20 +68,19 @@ env = gym.make(config["GAME"])
 
 LOW_BOUND = int(env.action_space.low[0])
 HIGH_BOUND = int(env.action_space.high[0])
-STATE_SIZE = env.observation_space.shape[0]
 ACTION_SIZE = env.action_space.shape[0]
 
 
 def train():
 
     print("Creating neural networks and optimizers...")
-    model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, folder, config)
+    model = Model(device, folder, config)
     if args.load:
         model.load(args.load)
 
+    # Signal to render evaluation during training by pressing CTRL+Z
     def handler(sig, frame):
         model.evaluate(n_ep=1, render=True)
-
     signal.signal(signal.SIGTSTP, handler)
 
     nb_total_steps = 0
