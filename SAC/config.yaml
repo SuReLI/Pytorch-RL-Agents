@@ -1,0 +1,23 @@
+
+# GAME : "Pendulum-v0"
+GAME : "LunarLanderContinuous-v2"
+# GAME : "BipedalWalker-v2"
+MEMORY_CAPACITY : 1000000
+BATCH_SIZE : 100
+GAMMA : 0.99
+VALUE_LR : 0.001
+SOFTQ_LR : 0.001
+ACTOR_LR : 0.001
+
+TAU : 0.005
+
+AUTO_ALPHA : False
+ALPHA_LR : 0.001
+
+MAX_EPISODES : 10000
+MAX_STEPS : 1000  # Max steps per episode
+
+# Expe 0 parameters
+FREQ_EVAL : 10  # Frequence of evaluation (if =100, 1 eval each 100 updates)
+
+HIDDEN_SIZE : 128
