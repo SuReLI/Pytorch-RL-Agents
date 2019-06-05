@@ -55,7 +55,7 @@ if args.gpu and torch.cuda.is_available():
     device = 'cuda'
 else:
     device = 'cpu'
-print("\033[91m\033[1mDevice : ", device.upper(), "\033[0m")
+print(f"\033[91m\033[1mDevice : {device.upper()}\nFolder : {folder}\033[0m")
 writer.add_text('Device', device, 0)
 device = torch.device(device)
 
@@ -126,6 +126,7 @@ def train():
             # Stores .png of the reward graph
             if nb_episodes_done % config["FREQ_PLOT"] == 0:
                 plt.cla()
+                plt.title(folder[5:])
                 plt.plot(rewards)
                 plt.savefig(folder+'/rewards.png')
 

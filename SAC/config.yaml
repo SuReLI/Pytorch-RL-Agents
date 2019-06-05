@@ -1,7 +1,11 @@
 
-# GAME : "Pendulum-v0"
-GAME : "LunarLanderContinuous-v2"
+GAME : "Pendulum-v0"
+# GAME : "LunarLanderContinuous-v2"
 # GAME : "BipedalWalker-v2"
+
+HIDDEN_VALUE_LAYERS : [128, 128, 128]
+HIDDEN_Q_LAYERS : [128, 128, 128]
+HIDDEN_PI_LAYERS : [128, 128]
 
 MEMORY_CAPACITY : 1000000
 BATCH_SIZE : 100
@@ -19,5 +23,3 @@ MAX_EPISODES : 10000
 MAX_STEPS : 1000  # Max steps per episode
 
 FREQ_PLOT : 10  
-
-HIDDEN_SIZE : 128

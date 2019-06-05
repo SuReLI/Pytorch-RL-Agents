@@ -12,7 +12,7 @@ except ModuleNotFoundError:
 import torch
 
 from model import Model
-from utils import get_latest_dir
+from utils import NormalizedActions, get_latest_dir
 from env_wrapper import PendulumWrapper, LunarWrapper
 
 
@@ -40,21 +40,16 @@ device = torch.device('cpu')
 # Create gym environment
 if args.hard_test:
     if config["GAME"].startswith("LunarLander"):
-        env = LunarWrapper()
+        env = NormalizedActions(LunarWrapper())
     elif config["GAME"].startswith("Pendulum"):
-        env = PendulumWrapper()
+        env = NormalizedActions(PendulumWrapper())
     else:
         raise Exception("Can't hard reset on this game !")
 else:
-    env = gym.make(config["GAME"])
-
-LOW_BOUND = int(env.action_space.low[0])
-HIGH_BOUND = int(env.action_space.high[0])
-STATE_SIZE = env.observation_space.shape[0]
-ACTION_SIZE = env.action_space.shape[0]
+    env = NormalizedActions(gym.make(config["GAME"]))
 
 # Creating neural networks and loading models
-model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, args.folder, config)
+model = Model(device, args.folder, config)
 model.eval_env = env
 model.load()
 

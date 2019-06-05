@@ -20,7 +20,7 @@ import torch
 from tensorboardX import SummaryWriter
 
 from model import Model
-from utils import get_current_time
+from utils import NormalizedActions, get_current_time
 
 
 print("TD3 starting...")
@@ -57,23 +57,20 @@ if args.gpu and torch.cuda.is_available():
 else:
     device = 'cpu'
 
-print("\033[91m\033[1mDevice : ", device.upper(), "\033[0m")
+print(f"\033[91m\033[1mDevice : {device.upper()}\nFolder : {folder}\033[0m")
 writer.add_text('Device', device, 0)
 device = torch.device(device)
 
 print("Creating environment...")
-env = gym.make(config["GAME"])
+env = NormalizedActions(gym.make(config["GAME"]))
 
-LOW_BOUND = int(env.action_space.low[0])
-HIGH_BOUND = int(env.action_space.high[0])
-STATE_SIZE = env.observation_space.shape[0]
 ACTION_SIZE = env.action_space.shape[0]
 
 
 def train():
 
     print("Creating neural networks and optimizers...")
-    model = Model(device, STATE_SIZE, ACTION_SIZE, LOW_BOUND, HIGH_BOUND, folder, config)
+    model = Model(device, folder, config)
     if args.load:
         model.load(args.load)
 
@@ -100,13 +97,13 @@ def train():
             while not done and step < config["MAX_STEPS"]:
 
                 if nb_total_steps < 1000:
-                    action = env.action_space.sample()
+                    action = np.random.uniform(-1, 1, ACTION_SIZE)
 
                 else:
                     action = model.select_action(state)
 
                     noise = np.random.normal(scale=config["EXPLO_SIGMA"], size=ACTION_SIZE)
-                    action = np.clip(action+noise, LOW_BOUND, HIGH_BOUND)
+                    action = np.clip(action+noise, -1, 1)
 
                 # Perform an action
                 next_state, reward, done, _ = env.step(action)
@@ -131,6 +128,7 @@ def train():
 
             if nb_episodes % config["FREQ_PLOT"] == 0:
                 plt.cla()
+                plt.title(folder[5:])
                 plt.plot(rewards)
                 plt.savefig(folder+'/rewards.png')
 

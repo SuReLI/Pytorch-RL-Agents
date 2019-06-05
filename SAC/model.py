@@ -7,7 +7,7 @@ import gym
 import torch
 import numpy as np
 
-from utils import ReplayMemory, NormalizedActions
+from utils import NormalizedActions, ReplayMemory
 from networks import ValueNetwork, SoftQNetwork, PolicyNetwork
 
 
@@ -24,11 +24,12 @@ class Model:
         self.state_size = self.eval_env.observation_space.shape[0]
         self.action_size = self.eval_env.action_space.shape[0]
 
-        self.value_net = ValueNetwork(self.state_size, self.config["HIDDEN_SIZE"]).to(device)
-        self.target_value_net = ValueNetwork(self.state_size, self.config["HIDDEN_SIZE"]).to(device)
-        self.soft_Q_net1 = SoftQNetwork(self.state_size, self.action_size, self.config["HIDDEN_SIZE"]).to(device)
-        self.soft_Q_net2 = SoftQNetwork(self.state_size, self.action_size, self.config["HIDDEN_SIZE"]).to(device)
-        self.soft_actor = PolicyNetwork(self.state_size, self.action_size, self.config["HIDDEN_SIZE"], device).to(device)
+        self.value_net = ValueNetwork(self.state_size, self.config["HIDDEN_VALUE_LAYERS"]).to(device)
+        self.target_value_net = ValueNetwork(self.state_size, self.config["HIDDEN_VALUE_LAYERS"]).to(device)
+        self.soft_Q_net1 = SoftQNetwork(self.state_size, self.action_size, self.config["HIDDEN_Q_LAYERS"]).to(device)
+        self.soft_Q_net2 = SoftQNetwork(self.state_size, self.action_size, self.config["HIDDEN_Q_LAYERS"]).to(device)
+        self.soft_actor = PolicyNetwork(self.state_size, self.action_size, self.config["HIDDEN_PI_LAYERS"], device).to(device)
+        self.target_value_net.eval()
 
         for target_param, param in zip(self.target_value_net.parameters(), self.value_net.parameters()):
             target_param.data.copy_(param.data)

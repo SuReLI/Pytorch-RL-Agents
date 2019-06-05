@@ -7,6 +7,7 @@ try:
 except ModuleNotFoundError:
     trange = range
 
+import numpy as np
 import gym
 try:
     import roboschool
@@ -56,7 +57,7 @@ if args.gpu and torch.cuda.is_available():
     device = 'cuda'
 else:
     device = 'cpu'
-print("\033[91m\033[1mDevice : ", device.upper(), "\033[0m")
+print(f"\033[91m\033[1mDevice : {device.upper()}\nFolder : {folder}\033[0m")
 writer.add_text('Device', device, 0)
 device = torch.device(device)
 
@@ -98,7 +99,7 @@ def train():
             while not done and step < config["MAX_STEPS"]:
 
                 if nb_total_steps < 10000:
-                    action = env.action_space.sample()
+                    action = np.random.uniform(-1, 1, env.action_space.shape[0])
 
                 else:
                     action = model.soft_actor.get_action(state)
@@ -126,14 +127,17 @@ def train():
                 writer.add_scalar('len_episode', lenghts[-1], episode)
 
                 plt.cla()
+                plt.title(folder[5:])
                 plt.plot(rewards)
                 plt.savefig(folder + '/rewards.png')
 
                 plt.cla()
+                plt.title(folder[5:])
                 plt.plot(eval_rewards)
                 plt.savefig(folder + '/eval_rewards.png')
 
                 plt.cla()
+                plt.title(folder[5:])
                 plt.plot(lenghts)
                 plt.savefig(folder + '/lenghts.png')
 

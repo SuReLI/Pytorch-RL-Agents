@@ -67,6 +67,9 @@ class NStepsReplayMemory:
 
 class NormalizedActions(gym.ActionWrapper):
     def action(self, action):
+
+        assert (-1 <= action).all() and (action <= 1).all(), "Action not valid"
+
         low = self.action_space.low
         high = self.action_space.high
 

@@ -11,7 +11,7 @@ except ModuleNotFoundError:
 import torch
 import torch.nn.functional as F
 
-from utils import ReplayMemory
+from utils import NormalizedActions, ReplayMemory
 from networks import Actor, Critic
 
 
@@ -23,15 +23,13 @@ class Model:
         self.config = config
         self.device = device
         self.memory = ReplayMemory(self.config["MEMORY_CAPACITY"])
-        self.eval_env = gym.make(self.config["GAME"])
+        self.eval_env = NormalizedActions(gym.make(self.config["GAME"]))
 
         self.state_size = self.eval_env.observation_space.shape[0]
         self.action_size = self.eval_env.action_space.shape[0]
-        self.low_bound = int(self.eval_env.action_space.low[0])
-        self.high_bound = int(self.eval_env.action_space.high[0])
 
         self.critic = Critic(self.state_size, self.action_size, device, self.config)
-        self.actor = Actor(self.state_size, self.action_size, self.low_bound, self.high_bound, device, self.config)
+        self.actor = Actor(self.state_size, self.action_size, device, self.config)
 
     def select_action(self, state):
         return self.actor.select_action(state)

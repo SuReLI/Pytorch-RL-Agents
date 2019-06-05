@@ -12,7 +12,7 @@ except ModuleNotFoundError:
 import torch
 
 from model import Model
-from utils import get_latest_dir
+from utils import NormalizedActions, get_latest_dir
 
 
 parser = argparse.ArgumentParser(description='Test DDPG')
@@ -35,7 +35,7 @@ with open(os.path.join(args.folder, 'config.yaml'), 'r') as file:
 device = torch.device('cpu')
 
 # Create gym environment
-env = gym.make(config["GAME"])
+env = NormalizedActions(gym.make(config["GAME"]))
 
 # Creating neural networks and loading models
 model = Model(device, args.folder, config)

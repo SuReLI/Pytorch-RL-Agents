@@ -11,28 +11,26 @@ except ModuleNotFoundError:
 import torch
 import torch.nn.functional as F
 
-from utils import ReplayMemory
+from utils import NormalizedActions, ReplayMemory
 from networks import Actor, Critic
 
 
 class Model:
 
-    def __init__(self, device, state_size, action_size, low_bound, high_bound, folder, config):
+    def __init__(self, device, folder, config):
 
         self.folder = folder
         self.config = config
         self.device = device
         self.memory = ReplayMemory(config["MEMORY_CAPACITY"])
-        self.eval_env = gym.make(self.config["GAME"])
+        self.eval_env = NormalizedActions(gym.make(self.config["GAME"]))
 
-        self.state_size = state_size
-        self.action_size = action_size
-        self.low_bound = low_bound
-        self.high_bound = high_bound
+        self.state_size = self.eval_env.observation_space.shape[0]
+        self.action_size = self.eval_env.action_space.shape[0]
 
-        self.critic_A = Critic(state_size, action_size, device, config)
-        self.critic_B = Critic(state_size, action_size, device, config)
-        self.actor = Actor(state_size, action_size, low_bound, high_bound, device, config)
+        self.critic_A = Critic(self.state_size, self.action_size, device, config)
+        self.critic_B = Critic(self.state_size, self.action_size, device, config)
+        self.actor = Actor(self.state_size, self.action_size, device, config)
 
         self.update_step = 0
 
@@ -64,7 +62,7 @@ class Model:
         next_actions = self.actor.target(next_states)
         noise = torch.normal(0, self.config["UPDATE_SIGMA"]*torch.ones([self.config["BATCH_SIZE"], 1]))
         noise = noise.clamp(-self.config["UPDATE_CLIP"], self.config["UPDATE_CLIP"]).to(self.device)
-        next_actions = torch.clamp(next_actions+noise, self.low_bound, self.high_bound)
+        next_actions = torch.clamp(next_actions+noise, -1, 1)
 
         # Compute next state values at t+1 using target critic network
         target_Qa = self.critic_A.target(next_states, next_actions).detach()
