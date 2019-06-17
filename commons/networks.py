@@ -28,14 +28,16 @@ class DQN(nn.Module):
 
 
 class CriticNetwork(nn.Module):
-    def __init__(self, input_size, hidden_layers_size):
+    def __init__(self, state_size, action_size, hidden_layers_size):
         super().__init__()
-        self.hiddens = nn.ModuleList([nn.Linear(input_size, hidden_layers_size[0])])
+
+        self.hiddens = nn.ModuleList([nn.Linear(state_size+action_size, hidden_layers_size[0])])
         for i in range(1, len(hidden_layers_size)):
             self.hiddens.append(nn.Linear(hidden_layers_size[i-1], hidden_layers_size[i]))
         self.output = nn.Linear(hidden_layers_size[-1], 1)
 
-    def forward(self, x):
+    def forward(self, state, action):
+        x = torch.cat([state, action], -1)
         for layer in self.hiddens:
             x = torch.relu(layer(x))
         return self.output(x)
@@ -80,31 +82,6 @@ class ValueNetwork(nn.Module):
         self.output.bias.data.uniform_(-init_w, init_w)
 
     def forward(self, x):
-        for layer in self.hiddens:
-            x = torch.relu(layer(x))
-        return self.output(x)
-
-    def save(self, file):
-        torch.save(self.state_dict(), file)
-
-    def load(self, file, device):
-        self.load_state_dict(torch.load(file, map_location=device))
-
-
-class SoftQNetwork(nn.Module):
-    def __init__(self, state_size, action_size, hidden_layers_size, init_w=3e-3):
-        super().__init__()
-
-        self.hiddens = nn.ModuleList([nn.Linear(state_size+action_size, hidden_layers_size[0])])
-        for i in range(1, len(hidden_layers_size)):
-            self.hiddens.append(nn.Linear(hidden_layers_size[i-1], hidden_layers_size[i]))
-        self.output = nn.Linear(hidden_layers_size[-1], 1)
-
-        self.output.weight.data.uniform_(-init_w, init_w)
-        self.output.bias.data.uniform_(-init_w, init_w)
-
-    def forward(self, state, action):
-        x = torch.cat([state, action], 1)
         for layer in self.hiddens:
             x = torch.relu(layer(x))
         return self.output(x)
@@ -165,13 +142,14 @@ class PolicyNetwork(nn.Module):
 
     def get_action(self, state):
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-        mean, log_std = self(state)
-        std = log_std.exp()
+        with torch.no_grad():
+            mean, log_std = self(state)
+            std = log_std.exp()
 
-        z = self.normal.sample((self.action_size, )).to(self.device)
-        action = torch.tanh(mean + std*z)
+            z = self.normal.sample((self.action_size, )).to(self.device)
+            action = torch.tanh(mean + std*z)
 
-        action = action.detach().cpu().numpy()
+        action = action.cpu().numpy()
         return action[0]
 
     def save(self, file):
@@ -231,8 +209,8 @@ class Critic:
     def __init__(self, state_size, action_size, device, config):
         self.device = device
 
-        self.nn = CriticNetwork(state_size + action_size, config['HIDDEN_LAYERS']).to(device)
-        self.target_nn = CriticNetwork(state_size + action_size, config['HIDDEN_LAYERS']).to(device)
+        self.nn = CriticNetwork(state_size, action_size, config['HIDDEN_LAYERS']).to(device)
+        self.target_nn = CriticNetwork(state_size, action_size, config['HIDDEN_LAYERS']).to(device)
         self.target_nn.load_state_dict(self.nn.state_dict())
         self.target_nn.eval()
 
@@ -259,12 +237,10 @@ class Critic:
         self.target_nn.load(os.path.join(folder, 'models/critic_target.pth'), device=self.device)
 
     def target(self, state, action):
-        state_action = torch.cat([state, action], -1)
-        return self.target_nn(state_action)
+        return self.target_nn(state, action)
 
     def __call__(self, state, action):
-        state_action = torch.cat([state, action], -1)
-        return self.nn(state_action)
+        return self.nn(state, action)
 
 
 class Actor:

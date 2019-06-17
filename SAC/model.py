@@ -8,7 +8,7 @@ import torch
 import numpy as np
 
 from utils import NormalizedActions, ReplayMemory
-from networks import ValueNetwork, SoftQNetwork, PolicyNetwork
+from networks import ValueNetwork, CriticNetwork, SoftActorNetwork
 
 
 class Model:
@@ -26,9 +26,9 @@ class Model:
 
         self.value_net = ValueNetwork(self.state_size, self.config["HIDDEN_VALUE_LAYERS"]).to(device)
         self.target_value_net = ValueNetwork(self.state_size, self.config["HIDDEN_VALUE_LAYERS"]).to(device)
-        self.soft_Q_net1 = SoftQNetwork(self.state_size, self.action_size, self.config["HIDDEN_Q_LAYERS"]).to(device)
-        self.soft_Q_net2 = SoftQNetwork(self.state_size, self.action_size, self.config["HIDDEN_Q_LAYERS"]).to(device)
-        self.soft_actor = PolicyNetwork(self.state_size, self.action_size, self.config["HIDDEN_PI_LAYERS"], device).to(device)
+        self.soft_Q_net1 = CriticNetwork(self.state_size, self.action_size, self.config["HIDDEN_Q_LAYERS"]).to(device)
+        self.soft_Q_net2 = CriticNetwork(self.state_size, self.action_size, self.config["HIDDEN_Q_LAYERS"]).to(device)
+        self.soft_actor = SoftActorNetwork(self.state_size, self.action_size, self.config["HIDDEN_PI_LAYERS"], device).to(device)
         self.target_value_net.eval()
 
         for target_param, param in zip(self.target_value_net.parameters(), self.value_net.parameters()):
