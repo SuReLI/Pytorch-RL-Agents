@@ -5,6 +5,7 @@ import os
 import argparse
 import yaml
 import gym
+import gym_hypercube
 try:
     import roboschool
 except ModuleNotFoundError:
@@ -35,7 +36,7 @@ with open(os.path.join(args.folder, 'config.yaml'), 'r') as file:
 device = torch.device('cpu')
 
 # Create gym environment
-env = NormalizedActions(gym.make(config["GAME"]))
+env = NormalizedActions(gym.make(config["GAME"], n_dimensions=1, acceleration=False))
 
 # Creating neural networks and loading models
 model = Model(device, args.folder, config)
@@ -43,5 +44,6 @@ model.load()
 print("\033[91m\033[1mModel loaded from ", args.folder, "\033[0m")
 
 score = model.evaluate(n_ep=args.nb_tests, render=args.no_render)
+model.plot_Q(pause=True)
 
 print(f"Average reward : {score}")

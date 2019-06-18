@@ -9,6 +9,7 @@ except ModuleNotFoundError:
 
 import numpy as np
 import gym
+import gym_hypercube
 try:
     import roboschool
 except ModuleNotFoundError:
@@ -63,7 +64,7 @@ device = torch.device(device)
 
 # Create gym environment
 print("Creating environment...")
-env = NormalizedActions(gym.make(config["GAME"]))
+env = NormalizedActions(gym.make(config["GAME"], n_dimensions=1, acceleration=False))
 
 
 def train():
@@ -76,6 +77,7 @@ def train():
     # Signal to render evaluation during training by pressing CTRL+Z
     def handler(sig, frame):
         model.evaluate(n_ep=1, render=True)
+        model.plot_Q(pause=True)
     signal.signal(signal.SIGTSTP, handler)
 
     nb_total_steps = 0
@@ -120,6 +122,7 @@ def train():
             rewards.append(episode_reward)
             eval_rewards.append(model.evaluate())
             lenghts.append(step)
+            model.plot_Q()
 
             if episode % config["FREQ_PLOT"] == 0:
                 writer.add_scalar('rewards', episode_reward, episode)
@@ -140,6 +143,8 @@ def train():
                 plt.title(folder[5:])
                 plt.plot(lenghts)
                 plt.savefig(folder + '/lenghts.png')
+
+                plt.close()
 
             nb_episodes += 1
 

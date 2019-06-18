@@ -9,6 +9,7 @@ import numpy as np
 
 from utils import NormalizedActions, ReplayMemory
 from networks import ValueNetwork, CriticNetwork, SoftActorNetwork
+from plotter import Plotter
 
 
 class Model:
@@ -19,7 +20,7 @@ class Model:
         self.config = config
         self.device = device
         self.memory = ReplayMemory(self.config["MEMORY_CAPACITY"])
-        self.eval_env = NormalizedActions(gym.make(self.config["GAME"]))
+        self.eval_env = NormalizedActions(gym.make(self.config["GAME"], n_dimensions=1, acceleration=False))
 
         self.state_size = self.eval_env.observation_space.shape[0]
         self.action_size = self.eval_env.action_space.shape[0]
@@ -47,6 +48,8 @@ class Model:
             self.target_entropy = -np.prod(self.eval_env.action_space.shape).item()
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
             self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=self.config["ALPHA_LR"])
+
+        self.plotter = Plotter(config, device, folder)
 
     def optimize(self):
 
@@ -158,3 +161,11 @@ class Model:
             self.soft_actor.load(self.folder + '/models/soft_actor.pth', self.device)
         except FileNotFoundError:
             raise Exception("No model has been saved !") from None
+
+    def plot_Q(self, pause=False):
+        if self.state_size == 1 and self.action_size == 1:
+            self.plotter.plot_soft_actor_1D(self.soft_actor, pause)
+            self.plotter.plot_Q_1D(self.soft_Q_net1, pause)
+
+        if self.state_size == 2 and self.action_size == 2:
+            self.plotter.plot_soft_Q_2D(self.soft_Q_net1, self.soft_actor, pause)

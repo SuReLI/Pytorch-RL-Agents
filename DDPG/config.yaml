@@ -18,6 +18,6 @@ TAU : 0.005
 EXPLO_SIGMA : 0.05  # Exploration noise
 
 MAX_EPISODES : 3000
-MAX_STEPS : 200  # Max steps per episode
+MAX_STEPS : 1000  # Max steps per episode
 
 FREQ_PLOT : 5

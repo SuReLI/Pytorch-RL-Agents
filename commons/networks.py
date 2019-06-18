@@ -70,16 +70,13 @@ class ActorNetwork(nn.Module):
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, state_size, hidden_layers_size, init_w=3e-3):
+    def __init__(self, state_size, hidden_layers_size):
         super().__init__()
 
         self.hiddens = nn.ModuleList([nn.Linear(state_size, hidden_layers_size[0])])
         for i in range(1, len(hidden_layers_size)):
             self.hiddens.append(nn.Linear(hidden_layers_size[i-1], hidden_layers_size[i]))
         self.output = nn.Linear(hidden_layers_size[-1], 1)
-
-        self.output.weight.data.uniform_(-init_w, init_w)
-        self.output.bias.data.uniform_(-init_w, init_w)
 
     def forward(self, x):
         for layer in self.hiddens:
@@ -93,7 +90,7 @@ class ValueNetwork(nn.Module):
         self.load_state_dict(torch.load(file, map_location=device))
 
 
-class PolicyNetwork(nn.Module):
+class SoftActorNetwork(nn.Module):
     def __init__(self, state_size, action_size, hidden_layers_size, device,
                  init_w=3e-3, log_std_min=-20, log_std_max=2):
         super().__init__()
@@ -139,6 +136,12 @@ class PolicyNetwork(nn.Module):
         log_prob -= torch.log(1 - action.pow(2) + 1e-6).sum(dim=1).unsqueeze(1)
 
         return action, log_prob
+
+    def get_mu_sig(self, state):
+        with torch.no_grad():
+            mean, log_std = self(state)
+        std = log_std.exp()
+        return mean.cpu().numpy(), std.cpu().numpy()
 
     def get_action(self, state):
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
