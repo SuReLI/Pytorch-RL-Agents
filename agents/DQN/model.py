@@ -1,6 +1,3 @@
-import sys
-sys.path.extend(["../commons/"])
-
 import random
 import imageio
 import gym
@@ -12,22 +9,22 @@ except ModuleNotFoundError:
 import torch
 import torch.nn.functional as F
 
-from networks import Agent
-from utils import NStepsReplayMemory, get_epsilon_threshold
+from commons.networks import Agent
+from commons.utils import NStepsReplayMemory, get_epsilon_threshold
 
 
-class Model:
+class DQN:
 
-    def __init__(self, device, state_size, action_size, folder, config, play=False):
+    def __init__(self, device, folder, config):
 
         self.folder = folder
         self.config = config
         self.device = device
         self.memory = NStepsReplayMemory(self.config['MEMORY_SIZE'], self.config['N_STEP'], self.config['GAMMA'])
-        self.eval_env = gym.make(self.config['GAME'])
+        self.eval_env = gym.make(**self.config['GAME'])
 
-        self.state_size = state_size
-        self.action_size = action_size
+        self.state_size = self.eval_env.observation_space.shape[0]
+        self.action_size = self.eval_env.action_space.n
 
         self.agent = Agent(self.state_size, self.action_size, self.device, self.config)
 
@@ -35,6 +32,8 @@ class Model:
         self.gamma_n = self.config["GAMMA"]**self.config['N_STEP']
 
     def select_action(self, state, episode=None, evaluation=False):
+        assert (episode is not None) or evaluation
+
         if evaluation or random.random() > get_epsilon_threshold(episode, self.config):
             return self.agent.select_action(state)
         else:
@@ -55,7 +54,7 @@ class Model:
     def optimize(self):
 
         if len(self.memory) < self.config['BATCH_SIZE']:
-            return
+            return {}
 
         transitions = self.memory.sample(self.config['BATCH_SIZE'])
         batch = list(zip(*transitions))
@@ -94,7 +93,7 @@ class Model:
 
         self.agent.update_target(self.config["TAU"])
 
-        return loss.item()
+        return {'loss': loss.item()}
 
     def evaluate(self, n_ep=10, render=False, gif=False):
         rewards = []
@@ -129,6 +128,7 @@ class Model:
         return score
 
     def save(self):
+        print("\033[91m\033[1mModel saved in", self.folder, "\033[0m")
         self.agent.save(self.folder)
 
     def load(self, folder=None):

@@ -2,7 +2,9 @@
 # GAME : "Pendulum-v0"
 # GAME : "LunarLanderContinuous-v2"
 # GAME : "BipedalWalker-v2"
-GAME : "Hypercube-v0"
+GAME : {id: Hypercube-v0,
+        n_dimensions: 1,
+        acceleration: False}
 
 HIDDEN_VALUE_LAYERS : [32, 32, 32]
 HIDDEN_Q_LAYERS : [32, 32, 32]
@@ -23,4 +25,5 @@ ALPHA_LR : 0.001
 MAX_EPISODES : 10000
 MAX_STEPS : 50  # Max steps per episode
 
-FREQ_PLOT : 10  
+FREQ_PLOT : 10
+FREQ_EVAL : 25

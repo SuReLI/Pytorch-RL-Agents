@@ -36,11 +36,8 @@ device = torch.device('cpu')
 # Create gym environment
 env = gym.make(config["GAME"])
 
-STATE_SIZE = env.observation_space.shape[0]
-ACTION_SIZE = env.action_space.n
-
 # Creating neural networks and loading models
-model = Model(device, STATE_SIZE, ACTION_SIZE, args.folder, config)
+model = Model(device, args.folder, config)
 model.load()
 
 score = model.evaluate(n_ep=args.nb_tests, render=args.render, gif=args.gif)

@@ -1,13 +1,11 @@
-import sys
-sys.path.extend(["../commons/"])
-
 import itertools
 
 import torch
 import numpy as np
 
 import gym
-from utils import NormalizedActions
+import gym_hypercube
+from commons.utils import NormalizedActions
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -20,7 +18,7 @@ class Plotter:
         self.folder = folder
         self.config = config
 
-        self.eval_env = NormalizedActions(gym.make(config["GAME"], n_dimensions=1, acceleration=False))
+        self.eval_env = NormalizedActions(gym.make(**config["GAME"]))
 
         self.nfig = 1
         self.nfig_actor = 1
@@ -110,7 +108,7 @@ class Plotter:
         done = False
         steps = 0
         while not done and steps < self.config['MAX_STEPS']:
-            state, r, done, _ = self.eval_env.step(soft_actor.get_action(state))
+            state, r, done, _ = self.eval_env.step(soft_actor.select_action(state))
             states.append(state)
             if pause:
                 self.eval_env.render()

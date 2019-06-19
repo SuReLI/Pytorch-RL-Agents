@@ -1,7 +1,7 @@
 
 # GAME : "Pendulum-v0"
-# GAME : "LunarLanderContinuous-v2"
-GAME : "BipedalWalker-v2"
+GAME : "LunarLanderContinuous-v2"
+# GAME : "BipedalWalker-v2"
 # GAME : "RoboschoolHalfCheetah-v0"
 # GAME : "MountainCarContinuous-v0"
 
@@ -15,7 +15,10 @@ LEARNING_RATE_CRITIC : 0.001
 LEARNING_RATE_ACTOR : 0.001
 TAU : 0.005
 
-EXPLO_SIGMA : 0.1  # Exploration noise
+EXPLO_SIGMA : 0.03  # Exploration noise
 
-MAX_EPISODES : 10000
-MAX_STEPS : 10000  # Max steps per episode
+MAX_EPISODES : 3000
+MAX_STEPS : 1000  # Max steps per episode
+
+FREQ_PLOT : 5
+FREQ_EVAL : 25

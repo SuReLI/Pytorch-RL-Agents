@@ -1,18 +1,15 @@
-import sys
-sys.path.extend(["../commons/"])
-
 import imageio
 import gym
 
 import torch
 import numpy as np
 
-from utils import NormalizedActions, ReplayMemory
-from networks import ValueNetwork, CriticNetwork, SoftActorNetwork
-from plotter import Plotter
+from commons.networks import ValueNetwork, CriticNetwork, SoftActorNetwork
+from commons.utils import NormalizedActions, ReplayMemory
+from commons.plotter import Plotter
 
 
-class Model:
+class SAC:
 
     def __init__(self, device, folder, config):
 
@@ -20,7 +17,7 @@ class Model:
         self.config = config
         self.device = device
         self.memory = ReplayMemory(self.config["MEMORY_CAPACITY"])
-        self.eval_env = NormalizedActions(gym.make(self.config["GAME"], n_dimensions=1, acceleration=False))
+        self.eval_env = NormalizedActions(gym.make(**self.config["GAME"]))
 
         self.state_size = self.eval_env.observation_space.shape[0]
         self.action_size = self.eval_env.action_space.shape[0]
@@ -51,10 +48,14 @@ class Model:
 
         self.plotter = Plotter(config, device, folder)
 
+    def select_action(self, state, episode=None, evaluation=False):
+        assert (episode is not None) or evaluation
+        return self.soft_actor.select_action(state)
+
     def optimize(self):
 
         if len(self.memory) < self.config["BATCH_SIZE"]:
-            return
+            return {}
 
         transitions = self.memory.sample(self.config["BATCH_SIZE"])
         states, actions, rewards, next_states, done = list(zip(*transitions))
@@ -113,6 +114,9 @@ class Model:
         for target_param, param in zip(self.target_value_net.parameters(), self.value_net.parameters()):
             target_param.data.copy_(target_param.data*(1.0-self.config["TAU"]) + param.data*self.config["TAU"])
 
+        return {'Q1_loss': loss_Q1.item(), 'Q2_loss': loss_Q2.item(),
+                'V_loss': loss_V.item(), 'actor_loss': loss_actor.item()}
+
     def evaluate(self, n_ep=10, render=False, gif=False):
         rewards = []
         if gif:
@@ -124,7 +128,7 @@ class Model:
                 done = False
                 steps = 0
                 while not done and steps < self.config["MAX_STEPS"]:
-                    action = self.soft_actor.get_action(state)
+                    action = self.select_action(state, evaluation=True)
                     state, r, done, _ = self.eval_env.step(action)
                     if render:
                         self.eval_env.render()
@@ -135,7 +139,8 @@ class Model:
                 rewards.append(reward)
 
         except KeyboardInterrupt:
-            pass
+            if not render:
+                raise
 
         finally:
             self.eval_env.close()

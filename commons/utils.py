@@ -67,6 +67,9 @@ class NStepsReplayMemory:
 
 class NormalizedActions(gym.ActionWrapper):
     def action(self, action):
+        # Discrete envs
+        if hasattr(self.action_space, 'n'):
+            return action
 
         assert (-1 <= action).all() and (action <= 1).all(), "Action not valid"
 
@@ -79,6 +82,10 @@ class NormalizedActions(gym.ActionWrapper):
         return action
 
     def reverse_action(self, action):
+        # Discrete envs
+        if hasattr(self.action_space, 'n'):
+            return action
+
         low = self.action_space.low
         high = self.action_space.high
 

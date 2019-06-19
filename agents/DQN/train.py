@@ -64,14 +64,11 @@ device = torch.device(device)
 print("Creating environment...")
 env = gym.make(config["GAME"])
 
-STATE_SIZE = env.observation_space.shape[0]
-ACTION_SIZE = env.action_space.n
-
 
 def train():
 
     print("Creating neural networks and optimizers...")
-    model = Model(device, STATE_SIZE, ACTION_SIZE, folder, config)
+    model = Model(device, folder, config)
     if args.load:
         model.load(args.load)
 

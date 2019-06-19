@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.distributions import Normal
 
 
-class DQN(nn.Module):
+class QNetwork(nn.Module):
 
     def __init__(self, input_size, action_size):
         super().__init__()
@@ -143,7 +143,7 @@ class SoftActorNetwork(nn.Module):
         std = log_std.exp()
         return mean.cpu().numpy(), std.cpu().numpy()
 
-    def get_action(self, state):
+    def select_action(self, state):
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         with torch.no_grad():
             mean, log_std = self(state)
@@ -167,15 +167,15 @@ class Agent:
         self.device = device
         self.config = config
 
-        self.nn = DQN(state_size, action_size).to(self.device)
-        self.target_nn = DQN(state_size, action_size).to(self.device)
+        self.nn = QNetwork(state_size, action_size).to(self.device)
+        self.target_nn = QNetwork(state_size, action_size).to(self.device)
         self.target_nn.load_state_dict(self.nn.state_dict())
         self.target_nn.eval()
 
         self.optimizer = optim.Adam(self.nn.parameters(), lr=config['LEARNING_RATE'])
         self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, config['STEP_LR'], config['GAMMA_LR'])
 
-    def update(self, loss, grad_clipping=True):
+    def update(self, loss, grad_clipping=False):
         self.optimizer.zero_grad()
         loss.backward()
         if self.config['GRAD_CLAMPING']:

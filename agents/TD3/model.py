@@ -1,6 +1,3 @@
-import sys
-sys.path.extend(["../commons/"])
-
 import imageio
 import gym
 try:
@@ -11,11 +8,11 @@ except ModuleNotFoundError:
 import torch
 import torch.nn.functional as F
 
-from utils import NormalizedActions, ReplayMemory
-from networks import Actor, Critic
+from commons.networks import Actor, Critic
+from commons.utils import NormalizedActions, ReplayMemory
 
 
-class Model:
+class TD3:
 
     def __init__(self, device, folder, config):
 
@@ -23,7 +20,7 @@ class Model:
         self.config = config
         self.device = device
         self.memory = ReplayMemory(config["MEMORY_CAPACITY"])
-        self.eval_env = NormalizedActions(gym.make(self.config["GAME"]))
+        self.eval_env = NormalizedActions(gym.make(**self.config["GAME"]))
 
         self.state_size = self.eval_env.observation_space.shape[0]
         self.action_size = self.eval_env.action_space.shape[0]
@@ -34,13 +31,14 @@ class Model:
 
         self.update_step = 0
 
-    def select_action(self, state):
+    def select_action(self, state, episode=None, evaluation=False):
+        assert (episode is not None) or evaluation
         return self.actor.select_action(state)
 
     def optimize(self):
 
         if len(self.memory) < self.config["BATCH_SIZE"]:
-            return None, None
+            return {}
 
         self.update_step += 1
 
@@ -76,24 +74,25 @@ class Model:
         loss_critic_A = F.mse_loss(current_Qa, target_Q)
         loss_critic_B = F.mse_loss(current_Qb, target_Q)
 
-        self.critic_A.update(loss_critic_A, grad_clipping=False)
-        self.critic_B.update(loss_critic_B, grad_clipping=False)
+        self.critic_A.update(loss_critic_A)
+        self.critic_B.update(loss_critic_B)
 
         # Optimize actor every 2 steps
         if self.update_step % 2 == 0:
             loss_actor = -self.critic_A(states, self.actor(states)).mean()
 
-            self.actor.update(loss_actor, grad_clipping=False)
+            self.actor.update(loss_actor)
 
             self.actor.update_target(self.config["TAU"])
 
             self.critic_A.update_target(self.config["TAU"])
             self.critic_B.update_target(self.config["TAU"])
 
-            return loss_actor.item(), loss_critic_A.item()
+            return {'Q1_loss': loss_critic_A.item(), 'Q2_loss': loss_critic_B.item(),
+                    'actor_loss': loss_actor.item()}
 
         else:
-            return None, loss_critic_A.item()
+            return {'Q1_loss': loss_critic_A.item(), 'Q2_loss': loss_critic_B.item()}
 
     def evaluate(self, n_ep=10, render=False, gif=False):
         rewards = []
@@ -106,7 +105,7 @@ class Model:
                 done = False
                 steps = 0
                 while not done and steps < self.config["MAX_STEPS"]:
-                    action = self.select_action(state)
+                    action = self.select_action(state, evaluation=True)
                     state, r, done, _ = self.eval_env.step(action)
                     if render:
                         self.eval_env.render()
@@ -128,6 +127,7 @@ class Model:
         return score
 
     def save(self):
+        print("\033[91m\033[1mModel saved in", self.folder, "\033[0m")
         self.actor.save(self.folder)
         self.critic_A.save(self.folder)
 

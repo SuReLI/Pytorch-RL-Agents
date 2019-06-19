@@ -103,6 +103,7 @@ class Model:
         return loss_actor.item(), loss_critic.item()
 
     def save(self):
+        print("\033[91m\033[1mModel saved in", self.folder, "\033[0m")
         self.actor.save(self.folder)
         self.critic.save(self.folder)
 
