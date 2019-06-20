@@ -2,7 +2,6 @@ import os
 import signal
 import time
 import datetime
-import argparse
 import yaml
 try:
     from tqdm import trange

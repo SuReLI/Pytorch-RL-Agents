@@ -61,10 +61,10 @@ class Model:
 
     def optimize(self):
 
-        if len(self.memory) < self.config["BATCH_SIZE"]:
+        if len(self.memory) < self.config['BATCH_SIZE']:
             return None, None
 
-        transitions = self.memory.sample(self.config["BATCH_SIZE"])
+        transitions = self.memory.sample(self.config['BATCH_SIZE'])
         batch = list(zip(*transitions))
 
         # Divide memory into different tensors
@@ -84,7 +84,7 @@ class Model:
         target_Q = self.critic.target(next_states, next_actions).detach()
 
         # Compute expected state action values y[i]= r[i] + Q'(s[i+1], a[i+1])
-        target_Q = rewards + done*self.config["GAMMA"]*target_Q
+        target_Q = rewards + done*self.config['GAMMA']*target_Q
 
         # Critic loss by mean squared error
         loss_critic = F.mse_loss(current_Q, target_Q)
@@ -97,8 +97,8 @@ class Model:
         self.actor.update(loss_actor)
 
         # Soft parameter update
-        self.critic.update_target(self.config["TAU"])
-        self.actor.update_target(self.config["TAU"])
+        self.critic.update_target(self.config['TAU'])
+        self.actor.update_target(self.config['TAU'])
 
         return loss_actor.item(), loss_critic.item()
 

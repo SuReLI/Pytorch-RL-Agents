@@ -5,6 +5,7 @@ try:
 except ModuleNotFoundError:
     pass
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -20,7 +21,7 @@ class TD3:
         self.config = config
         self.device = device
         self.memory = ReplayMemory(config["MEMORY_CAPACITY"])
-        self.eval_env = NormalizedActions(gym.make(**self.config["GAME"]))
+        self.eval_env = NormalizedActions(gym.make(**self.config['GAME']))
 
         self.state_size = self.eval_env.observation_space.shape[0]
         self.action_size = self.eval_env.action_space.shape[0]
@@ -33,16 +34,18 @@ class TD3:
 
     def select_action(self, state, episode=None, evaluation=False):
         assert (episode is not None) or evaluation
-        return self.actor.select_action(state)
+        action = self.actor.select_action(state)
+        noise = np.random.normal(scale=self.config['EXPLO_SIGMA'], size=self.action_size)
+        return np.clip(action+noise, -1, 1)
 
     def optimize(self):
 
-        if len(self.memory) < self.config["BATCH_SIZE"]:
+        if len(self.memory) < self.config['BATCH_SIZE']:
             return {}
 
         self.update_step += 1
 
-        transitions = self.memory.sample(self.config["BATCH_SIZE"])
+        transitions = self.memory.sample(self.config['BATCH_SIZE'])
         batch = list(zip(*transitions))
 
         # Divide memory into different tensors
@@ -58,8 +61,8 @@ class TD3:
 
         # Compute deterministic next state action using actor target network
         next_actions = self.actor.target(next_states)
-        noise = torch.normal(0, self.config["UPDATE_SIGMA"]*torch.ones([self.config["BATCH_SIZE"], 1]))
-        noise = noise.clamp(-self.config["UPDATE_CLIP"], self.config["UPDATE_CLIP"]).to(self.device)
+        noise = torch.normal(0, self.config['UPDATE_SIGMA']*torch.ones([self.config['BATCH_SIZE'], 1]))
+        noise = noise.clamp(-self.config['UPDATE_CLIP'], self.config['UPDATE_CLIP']).to(self.device)
         next_actions = torch.clamp(next_actions+noise, -1, 1)
 
         # Compute next state values at t+1 using target critic network
@@ -68,7 +71,7 @@ class TD3:
         target_Q = torch.min(target_Qa, target_Qb)
 
         # Compute expected state action values y[i]= r[i] + Q'(s[i+1], a[i+1])
-        target_Q = rewards + done*self.config["GAMMA"]*target_Q
+        target_Q = rewards + (1 - done) * self.config['GAMMA'] * target_Q
 
         # loss_critic = F.mse_loss(current_Qa, target_Q) + F.mse_loss(current_Qb, target_Q)
         loss_critic_A = F.mse_loss(current_Qa, target_Q)
@@ -83,10 +86,10 @@ class TD3:
 
             self.actor.update(loss_actor)
 
-            self.actor.update_target(self.config["TAU"])
+            self.actor.update_target(self.config['TAU'])
 
-            self.critic_A.update_target(self.config["TAU"])
-            self.critic_B.update_target(self.config["TAU"])
+            self.critic_A.update_target(self.config['TAU'])
+            self.critic_B.update_target(self.config['TAU'])
 
             return {'Q1_loss': loss_critic_A.item(), 'Q2_loss': loss_critic_B.item(),
                     'actor_loss': loss_actor.item()}
@@ -104,7 +107,7 @@ class TD3:
                 reward = 0
                 done = False
                 steps = 0
-                while not done and steps < self.config["MAX_STEPS"]:
+                while not done and steps < self.config['MAX_STEPS']:
                     action = self.select_action(state, evaluation=True)
                     state, r, done, _ = self.eval_env.step(action)
                     if render:

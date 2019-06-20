@@ -5,6 +5,7 @@ try:
 except ModuleNotFoundError:
     pass
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -19,8 +20,8 @@ class DDPG:
         self.folder = folder
         self.config = config
         self.device = device
-        self.memory = ReplayMemory(self.config["MEMORY_CAPACITY"])
-        self.eval_env = NormalizedActions(gym.make(**self.config["GAME"]))
+        self.memory = ReplayMemory(self.config['MEMORY_CAPACITY'])
+        self.eval_env = NormalizedActions(gym.make(**self.config['GAME']))
 
         self.state_size = self.eval_env.observation_space.shape[0]
         self.action_size = self.eval_env.action_space.shape[0]
@@ -30,14 +31,16 @@ class DDPG:
 
     def select_action(self, state, episode=None, evaluation=False):
         assert (episode is not None) or evaluation
-        return self.actor.select_action(state)
+        action = self.actor.select_action(state)
+        noise = np.random.normal(scale=self.config['EXPLO_SIGMA'], size=self.action_size)
+        return np.clip(action+noise, -1, 1)
 
     def optimize(self):
 
-        if len(self.memory) < self.config["BATCH_SIZE"]:
+        if len(self.memory) < self.config['BATCH_SIZE']:
             return {}
 
-        transitions = self.memory.sample(self.config["BATCH_SIZE"])
+        transitions = self.memory.sample(self.config['BATCH_SIZE'])
         batch = list(zip(*transitions))
 
         # Divide memory into different tensors
@@ -57,7 +60,7 @@ class DDPG:
         target_Q = self.critic.target(next_states, next_actions).detach()
 
         # Compute expected state action values y[i]= r[i] + Q'(s[i+1], a[i+1])
-        target_Q = rewards + done*self.config["GAMMA"]*target_Q
+        target_Q = rewards + (1 - done) * self.config['GAMMA'] * target_Q
 
         # Critic loss by mean squared error
         loss_critic = F.mse_loss(current_Q, target_Q)
@@ -70,8 +73,8 @@ class DDPG:
         self.actor.update(loss_actor)
 
         # Soft parameter update
-        self.critic.update_target(self.config["TAU"])
-        self.actor.update_target(self.config["TAU"])
+        self.critic.update_target(self.config['TAU'])
+        self.actor.update_target(self.config['TAU'])
 
         return {'actor_loss': loss_actor.item(), 'critic_loss': loss_critic.item()}
 
@@ -85,7 +88,7 @@ class DDPG:
                 reward = 0
                 done = False
                 steps = 0
-                while not done and steps < self.config["MAX_STEPS"]:
+                while not done and steps < self.config['MAX_STEPS']:
                     action = self.select_action(state, evaluation=True)
                     state, r, done, _ = self.eval_env.step(action)
                     if render:

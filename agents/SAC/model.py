@@ -16,35 +16,35 @@ class SAC:
         self.folder = folder
         self.config = config
         self.device = device
-        self.memory = ReplayMemory(self.config["MEMORY_CAPACITY"])
-        self.eval_env = NormalizedActions(gym.make(**self.config["GAME"]))
+        self.memory = ReplayMemory(self.config['MEMORY_CAPACITY'])
+        self.eval_env = NormalizedActions(gym.make(**self.config['GAME']))
 
         self.state_size = self.eval_env.observation_space.shape[0]
         self.action_size = self.eval_env.action_space.shape[0]
 
-        self.value_net = ValueNetwork(self.state_size, self.config["HIDDEN_VALUE_LAYERS"]).to(device)
-        self.target_value_net = ValueNetwork(self.state_size, self.config["HIDDEN_VALUE_LAYERS"]).to(device)
-        self.soft_Q_net1 = CriticNetwork(self.state_size, self.action_size, self.config["HIDDEN_Q_LAYERS"]).to(device)
-        self.soft_Q_net2 = CriticNetwork(self.state_size, self.action_size, self.config["HIDDEN_Q_LAYERS"]).to(device)
-        self.soft_actor = SoftActorNetwork(self.state_size, self.action_size, self.config["HIDDEN_PI_LAYERS"], device).to(device)
+        self.value_net = ValueNetwork(self.state_size, self.config['HIDDEN_VALUE_LAYERS']).to(device)
+        self.target_value_net = ValueNetwork(self.state_size, self.config['HIDDEN_VALUE_LAYERS']).to(device)
+        self.soft_Q_net1 = CriticNetwork(self.state_size, self.action_size, self.config['HIDDEN_Q_LAYERS']).to(device)
+        self.soft_Q_net2 = CriticNetwork(self.state_size, self.action_size, self.config['HIDDEN_Q_LAYERS']).to(device)
+        self.soft_actor = SoftActorNetwork(self.state_size, self.action_size, self.config['HIDDEN_PI_LAYERS'], device).to(device)
         self.target_value_net.eval()
 
         for target_param, param in zip(self.target_value_net.parameters(), self.value_net.parameters()):
             target_param.data.copy_(param.data)
 
-        self.value_optimizer = torch.optim.Adam(self.value_net.parameters(), lr=self.config["VALUE_LR"])
-        self.soft_q_optimizer1 = torch.optim.Adam(self.soft_Q_net1.parameters(), lr=self.config["SOFTQ_LR"])
-        self.soft_q_optimizer2 = torch.optim.Adam(self.soft_Q_net2.parameters(), lr=self.config["SOFTQ_LR"])
-        self.soft_actor_optimizer = torch.optim.Adam(self.soft_actor.parameters(), lr=self.config["ACTOR_LR"])
+        self.value_optimizer = torch.optim.Adam(self.value_net.parameters(), lr=self.config['VALUE_LR'])
+        self.soft_q_optimizer1 = torch.optim.Adam(self.soft_Q_net1.parameters(), lr=self.config['SOFTQ_LR'])
+        self.soft_q_optimizer2 = torch.optim.Adam(self.soft_Q_net2.parameters(), lr=self.config['SOFTQ_LR'])
+        self.soft_actor_optimizer = torch.optim.Adam(self.soft_actor.parameters(), lr=self.config['ACTOR_LR'])
 
         self.q_criterion1 = torch.nn.MSELoss()
         self.q_criterion2 = torch.nn.MSELoss()
         self.value_criterion = torch.nn.MSELoss()
 
-        if self.config["AUTO_ALPHA"]:
+        if self.config['AUTO_ALPHA']:
             self.target_entropy = -np.prod(self.eval_env.action_space.shape).item()
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
-            self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=self.config["ALPHA_LR"])
+            self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=self.config['ALPHA_LR'])
 
         self.plotter = Plotter(config, device, folder)
 
@@ -54,10 +54,10 @@ class SAC:
 
     def optimize(self):
 
-        if len(self.memory) < self.config["BATCH_SIZE"]:
+        if len(self.memory) < self.config['BATCH_SIZE']:
             return {}
 
-        transitions = self.memory.sample(self.config["BATCH_SIZE"])
+        transitions = self.memory.sample(self.config['BATCH_SIZE'])
         states, actions, rewards, next_states, done = list(zip(*transitions))
 
         # Divide memory into different tensors
@@ -73,7 +73,7 @@ class SAC:
         new_actions, log_prob = self.soft_actor.evaluate(states)
 
         # Compute the next value of alpha
-        if self.config["AUTO_ALPHA"]:
+        if self.config['AUTO_ALPHA']:
             alpha_loss = -(self.log_alpha * (log_prob + self.target_entropy).detach()).mean()
             self.alpha_optimizer.zero_grad()
             alpha_loss.backward()
@@ -83,7 +83,7 @@ class SAC:
             alpha = 0.2
 
         next_V = self.target_value_net(next_states)
-        target_Q = rewards + (1 - done) * self.config["GAMMA"] * next_V
+        target_Q = rewards + (1 - done) * self.config['GAMMA'] * next_V
 
         expected_new_Q1 = self.soft_Q_net1(states, new_actions)
         expected_new_Q2 = self.soft_Q_net2(states, new_actions)
@@ -112,7 +112,7 @@ class SAC:
         self.soft_actor_optimizer.step()
 
         for target_param, param in zip(self.target_value_net.parameters(), self.value_net.parameters()):
-            target_param.data.copy_(target_param.data*(1.0-self.config["TAU"]) + param.data*self.config["TAU"])
+            target_param.data.copy_(target_param.data*(1.0-self.config['TAU']) + param.data*self.config['TAU'])
 
         return {'Q1_loss': loss_Q1.item(), 'Q2_loss': loss_Q2.item(),
                 'V_loss': loss_V.item(), 'actor_loss': loss_actor.item()}
@@ -127,7 +127,7 @@ class SAC:
                 reward = 0
                 done = False
                 steps = 0
-                while not done and steps < self.config["MAX_STEPS"]:
+                while not done and steps < self.config['MAX_STEPS']:
                     action = self.select_action(state, evaluation=True)
                     state, r, done, _ = self.eval_env.step(action)
                     if render:

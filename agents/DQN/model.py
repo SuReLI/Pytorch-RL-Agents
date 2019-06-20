@@ -29,7 +29,7 @@ class DQN:
         self.agent = Agent(self.state_size, self.action_size, self.device, self.config)
 
         # Compute gamma^n for n-steps return
-        self.gamma_n = self.config["GAMMA"]**self.config['N_STEP']
+        self.gamma_n = self.config['GAMMA']**self.config['N_STEP']
 
     def select_action(self, state, episode=None, evaluation=False):
         assert (episode is not None) or evaluation
@@ -84,14 +84,14 @@ class DQN:
             # =====================================================================
 
         # Compute the expected Q values : y[i]= r[i] + gamma * Q'(s[i+1], a[i+1])
-        target_Q = rewards + done * self.gamma_n * next_Q
+        target_Q = rewards + (1 - done) * self.gamma_n * next_Q
 
         loss = F.mse_loss(current_Q, target_Q)
 
         # Optimize the model
         self.agent.update(loss)
 
-        self.agent.update_target(self.config["TAU"])
+        self.agent.update_target(self.config['TAU'])
 
         return {'loss': loss.item()}
 
@@ -105,7 +105,7 @@ class DQN:
                 reward = 0
                 done = False
                 steps = 0
-                while not done and steps < self.config["MAX_STEPS"]:
+                while not done and steps < self.config['MAX_STEPS']:
                     action = self.select_action(state, evaluation=True)
                     state, r, done, _ = self.eval_env.step(action)
                     if render:
