@@ -119,11 +119,13 @@ class TD3:
                 rewards.append(reward)
 
         except KeyboardInterrupt:
-            pass
+            if not render:
+                raise
 
         finally:
             self.eval_env.close()
             if gif:
+                print(f"Saved gif in {self.folder+'/results.gif'}")
                 writer.close()
 
         score = sum(rewards)/len(rewards) if rewards else 0

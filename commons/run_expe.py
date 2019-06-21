@@ -13,7 +13,7 @@ import gym
 import gym_hypercube
 import matplotlib.pyplot as plt
 
-from commons.utils import NormalizedActions
+from commons.utils import NormalizedActions, get_latest_dir
 
 
 def load_config(path):
@@ -150,3 +150,23 @@ def train(Agent, args):
           'Average nb of steps per second : ', round(nb_total_steps/time_execution, 3), 'steps/s\n'
           'Average duration of one episode : ', round(time_execution/max(1, nb_episodes), 3), 's\n'
           '---------------------------------------------------')
+
+
+def test(Agent, args):
+
+    if args.folder is None:
+        agent_folder = f'results/{args.agent}'
+        args.folder = os.path.join(get_latest_dir(agent_folder))
+
+    with open(os.path.join(args.folder, 'config.yaml'), 'r') as file:
+        config = yaml.safe_load(file)
+
+    device = torch.device('cpu')
+
+    # Creating neural networks and loading models
+    print(f"Testing \033[91m\033[1m{args.agent}\033[0m saved in the folder {args.folder}")
+    model = Agent(device, args.folder, config)
+    model.load()
+
+    score = model.evaluate(n_ep=args.nb_tests, render=args.render, gif=args.gif)
+    print(f"Average score : {score}")

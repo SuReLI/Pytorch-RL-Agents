@@ -119,14 +119,17 @@ def is_valid(title):
 
 
 def get_latest_dir(folder):
-    dirs = os.listdir(folder)
+    try:
+        dirs = os.listdir(folder)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"No expe saved in the folder {folder} !") from None
 
     dirs = list(filter(is_valid, dirs))
     dirs.sort(key=convert_name)
     if len(dirs) > 0:
-        return dirs[-1]
+        return os.path.join(folder, dirs[-1])
     else:
-        raise FileNotFoundError("No valid file in the folder runs/ !")
+        raise FileNotFoundError(f"No valid file in the folder {folder} !")
 
 
 def get_current_time():

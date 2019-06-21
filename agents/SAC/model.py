@@ -120,7 +120,7 @@ class SAC:
     def evaluate(self, n_ep=10, render=False, gif=False):
         rewards = []
         if gif:
-            writer = imageio.get_writer(self.folder + 'test_run.gif', duration=0.005)
+            writer = imageio.get_writer(self.folder + '/results.gif', duration=0.005)
         try:
             for i in range(n_ep):
                 state = self.eval_env.reset()
@@ -145,6 +145,7 @@ class SAC:
         finally:
             self.eval_env.close()
             if gif:
+                print(f"Saved gif in {self.folder+'/results.gif'}")
                 writer.close()
 
         score = sum(rewards)/len(rewards) if rewards else 0
