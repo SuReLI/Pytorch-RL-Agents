@@ -46,11 +46,12 @@ class NStepsReplayMemory:
         self.n_step_memory.append(transition)
         if len(self.n_step_memory) >= self.n_step:
             s_mem, a_mem, R, si_, done = self.n_step_memory.popleft()
-            for i in range(self.n_step-1):
-                si, ai, ri, si_, done = self.n_step_memory[i]
-                if si is None:
-                    break
-                R += ri * self.gamma ** (i+1)
+            if not done:
+                for i in range(self.n_step-1):
+                    si, ai, ri, si_, done = self.n_step_memory[i]
+                    R += ri * self.gamma ** (i+1)
+                    if done:
+                        break
 
             if len(self.memory) < self.capacity:
                 self.memory.append([s_mem, a_mem, R, si_, done])
