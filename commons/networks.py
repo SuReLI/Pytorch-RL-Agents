@@ -162,7 +162,7 @@ class SoftActorNetwork(nn.Module):
         self.load_state_dict(torch.load(file, map_location=device))
 
 
-class Agent:
+class QAgent:
     def __init__(self, state_size, action_size, device, config):
         self.device = device
         self.config = config

@@ -32,38 +32,30 @@ class ReplayMemory:
         return len(self.memory)
 
 
-class NStepsReplayMemory:
+class NStepsReplayMemory(ReplayMemory):
 
     def __init__(self, capacity, n_step, gamma):
-        self.capacity = capacity
+        super().__init__(capacity)
         self.n_step = n_step
         self.gamma = gamma
-        self.memory = []
-        self.n_step_memory = deque()
-        self.position = 0
+        self.nstep_memory = deque()
+
+    def _process_n_step_memory(self):
+        s_mem, a_mem, R, si_, done = self.nstep_memory.popleft()
+        if not done:
+            for i in range(self.n_step-1):
+                si, ai, ri, si_, done = self.nstep_memory[i]
+                R += ri * self.gamma ** (i+1)
+                if done:
+                    break
+
+        return [s_mem, a_mem, R, si_, done]
 
     def push(self, *transition):
-        self.n_step_memory.append(transition)
-        if len(self.n_step_memory) >= self.n_step:
-            s_mem, a_mem, R, si_, done = self.n_step_memory.popleft()
-            if not done:
-                for i in range(self.n_step-1):
-                    si, ai, ri, si_, done = self.n_step_memory[i]
-                    R += ri * self.gamma ** (i+1)
-                    if done:
-                        break
-
-            if len(self.memory) < self.capacity:
-                self.memory.append([s_mem, a_mem, R, si_, done])
-            else:
-                self.memory[self.position] = [s_mem, a_mem, R, si_, done]
-                self.position = (self.position + 1) % self.capacity
-
-    def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
-
-    def __len__(self):
-        return len(self.memory)
+        self.nstep_memory.append(transition)
+        while len(self.nstep_memory) >= self.n_step or (self.nstep_memory and self.nstep_memory[-1][4]):
+            nstep_transition = self._process_n_step_memory()
+            super().push(*nstep_transition)
 
 
 class NormalizedActions(gym.ActionWrapper):

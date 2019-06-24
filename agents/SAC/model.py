@@ -1,26 +1,16 @@
-import imageio
-import gym
-
-import torch
 import numpy as np
 
+import torch
+
 from commons.networks import ValueNetwork, CriticNetwork, SoftActorNetwork
-from commons.utils import NormalizedActions, ReplayMemory
 from commons.plotter import Plotter
+from commons.Agent import Agent
 
 
-class SAC:
+class SAC(Agent):
 
     def __init__(self, device, folder, config):
-
-        self.folder = folder
-        self.config = config
-        self.device = device
-        self.memory = ReplayMemory(self.config['MEMORY_CAPACITY'])
-        self.eval_env = NormalizedActions(gym.make(**self.config['GAME']))
-
-        self.state_size = self.eval_env.observation_space.shape[0]
-        self.action_size = self.eval_env.action_space.shape[0]
+        super().__init__(device, folder, config)
 
         self.value_net = ValueNetwork(self.state_size, self.config['HIDDEN_VALUE_LAYERS']).to(device)
         self.target_value_net = ValueNetwork(self.state_size, self.config['HIDDEN_VALUE_LAYERS']).to(device)
@@ -57,15 +47,7 @@ class SAC:
         if len(self.memory) < self.config['BATCH_SIZE']:
             return {}
 
-        transitions = self.memory.sample(self.config['BATCH_SIZE'])
-        states, actions, rewards, next_states, done = list(zip(*transitions))
-
-        # Divide memory into different tensors
-        states = torch.FloatTensor(states).to(self.device)
-        actions = torch.FloatTensor(actions).to(self.device)
-        rewards = torch.FloatTensor(rewards).unsqueeze(1).to(self.device)
-        next_states = torch.FloatTensor(next_states).to(self.device)
-        done = torch.FloatTensor(done).unsqueeze(1).to(self.device)
+        states, actions, rewards, next_states, done = self.get_batch()
 
         current_Q1 = self.soft_Q_net1(states, actions)
         current_Q2 = self.soft_Q_net2(states, actions)
@@ -116,40 +98,6 @@ class SAC:
 
         return {'Q1_loss': loss_Q1.item(), 'Q2_loss': loss_Q2.item(),
                 'V_loss': loss_V.item(), 'actor_loss': loss_actor.item()}
-
-    def evaluate(self, n_ep=10, render=False, gif=False):
-        rewards = []
-        if gif:
-            writer = imageio.get_writer(self.folder + '/results.gif', duration=0.005)
-        try:
-            for i in range(n_ep):
-                state = self.eval_env.reset()
-                reward = 0
-                done = False
-                steps = 0
-                while not done and steps < self.config['MAX_STEPS']:
-                    action = self.select_action(state, evaluation=True)
-                    state, r, done, _ = self.eval_env.step(action)
-                    if render:
-                        self.eval_env.render()
-                    if i == 0 and gif:
-                        writer.append_data(self.eval_env.render(mode='rgb_array'))
-                    reward += r
-                    steps += 1
-                rewards.append(reward)
-
-        except KeyboardInterrupt:
-            if not render:
-                raise
-
-        finally:
-            self.eval_env.close()
-            if gif:
-                print(f"Saved gif in {self.folder+'/results.gif'}")
-                writer.close()
-
-        score = sum(rewards)/len(rewards) if rewards else 0
-        return score
 
     def save(self):
         print("\033[91m\033[1mModel saved in", self.folder, "\033[0m")
