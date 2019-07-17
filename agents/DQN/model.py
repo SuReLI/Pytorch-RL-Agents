@@ -13,7 +13,7 @@ class DQN(Agent):
     def __init__(self, device, folder, config):
         super().__init__(device, folder, config)
 
-        self.memory = NStepsReplayMemory(self.config['MEMORY_SIZE'], self.config['N_STEP'], self.config['GAMMA'])
+        self.memory = NStepsReplayMemory(self.config['MEMORY_CAPACITY'], self.config['N_STEP'], self.config['GAMMA'])
 
         self.agent = QAgent(self.state_size, self.action_size, self.device, self.config)
 
