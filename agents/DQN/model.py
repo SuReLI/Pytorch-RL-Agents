@@ -5,10 +5,10 @@ import torch.nn.functional as F
 
 from commons.networks import QAgent
 from commons.utils import NStepsReplayMemory, get_epsilon_threshold
-from commons.Agent import Agent
+from commons.Abstract_Agent import AbstractAgent
 
 
-class DQN(Agent):
+class DQN(AbstractAgent):
 
     def __init__(self, device, folder, config):
         super().__init__(device, folder, config)

@@ -12,7 +12,7 @@ import torch
 from commons.utils import NormalizedActions, ReplayMemory
 
 
-class Agent(ABC):
+class AbstractAgent(ABC):
 
     def __init__(self, device, folder, config):
 

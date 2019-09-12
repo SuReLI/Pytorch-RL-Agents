@@ -2,12 +2,12 @@ import numpy as np
 
 import torch
 
-from commons.networks import ValueNetwork, CriticNetwork, SoftActorNetwork
+from commons.network_modules import ValueNetwork, CriticNetwork, SoftActorNetwork
 from commons.plotter import Plotter
-from commons.Agent import Agent
+from commons.Abstract_Agent import AbstractAgent
 
 
-class SAC(Agent):
+class SAC(AbstractAgent):
 
     def __init__(self, device, folder, config):
         super().__init__(device, folder, config)
