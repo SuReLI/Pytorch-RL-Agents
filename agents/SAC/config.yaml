@@ -27,3 +27,4 @@ MAX_STEPS : 50  # Max steps per episode
 
 FREQ_PLOT : 10
 FREQ_EVAL : 25
+FREQ_SAVE : 250

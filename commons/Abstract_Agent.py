@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+import os
 import imageio
 import gym
 try:
@@ -28,6 +29,8 @@ class AbstractAgent(ABC):
             self.action_size = self.eval_env.action_space.shape[0]
         else:
             self.action_size = self.eval_env.action_space.n
+
+        self.display_available = 'DISPLAY' in os.environ
 
     @abstractmethod
     def select_action(self, state, episode=None, evaluation=False):
@@ -58,6 +61,8 @@ class AbstractAgent(ABC):
         rewards = []
         if gif:
             writer = imageio.get_writer(self.folder + '/results.gif', duration=0.005)
+        render = render and self.display_available
+
         try:
             for i in range(n_ep):
                 state = self.eval_env.reset()
