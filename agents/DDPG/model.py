@@ -16,7 +16,10 @@ class DDPG(AbstractAgent):
     def select_action(self, state, episode=None, evaluation=False):
         assert (episode is not None) or evaluation
         action = self.actor.select_action(state)
-        noise = np.random.normal(scale=self.config['EXPLO_SIGMA'], size=self.action_size)
+        if evaluation:
+            noise = 0
+        else:
+            noise = np.random.normal(scale=self.config['EXPLO_SIGMA'], size=self.action_size)
         return np.clip(action+noise, -1, 1)
 
     def optimize(self):

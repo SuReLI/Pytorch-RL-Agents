@@ -106,7 +106,7 @@ def train(Agent, args):
             rewards.append(episode_reward)
             lenghts.append(step)
 
-            if episode % config["FREQ_SAVE"] == 0:
+            if episode > 0 and episode % config["FREQ_SAVE"] == 0:
                 model.save()
 
             if episode % config["FREQ_EVAL"] == 0:

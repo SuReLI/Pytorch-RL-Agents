@@ -5,7 +5,7 @@ import imageio
 import gym
 try:
     import roboschool   # noqa: F401
-except ModuleNotFoundError:
+except (ModuleNotFoundError, TypeError):
     pass
 
 import torch

@@ -67,6 +67,7 @@ class DQN(AbstractAgent):
 
         # Compute the expected Q values : y[i]= r[i] + gamma * Q'(s[i+1], a[i+1])
         target_Q = rewards + (1 - done) * self.gamma_n * next_Q
+        target_Q = target_Q.detach()
 
         loss = F.mse_loss(current_Q, target_Q)
 
