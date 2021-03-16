@@ -10,7 +10,11 @@ except ModuleNotFoundError:
 
 import torch
 import gym
-import gym_hypercube
+try:
+    import gym_hypercube  # noqa: F401
+except ModuleNotFoundError:
+    pass
+
 import matplotlib.pyplot as plt
 
 from commons.utils import NormalizedActions, get_latest_dir

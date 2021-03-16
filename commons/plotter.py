@@ -4,7 +4,10 @@ import torch
 import numpy as np
 
 import gym
-import gym_hypercube
+try:
+    import gym_hypercube  # noqa: F401
+except ModuleNotFoundError:
+    pass
 from commons.utils import NormalizedActions
 
 import matplotlib.pyplot as plt

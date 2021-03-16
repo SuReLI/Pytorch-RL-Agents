@@ -75,7 +75,7 @@ class SAC(AbstractAgent):
         loss_Q1 = self.q_criterion1(current_Q1, target_Q.detach())
         loss_Q2 = self.q_criterion2(current_Q2, target_Q.detach())
         loss_V = self.value_criterion(current_V, target_V.detach())
-        loss_actor = (alpha * log_prob - expected_new_Q1).mean()
+        loss_actor = (alpha * log_prob - expected_new_Q1.detach()).mean()
 
         self.soft_q_optimizer1.zero_grad()
         loss_Q1.backward()
@@ -106,13 +106,15 @@ class SAC(AbstractAgent):
         self.soft_Q_net1.save(self.folder + '/models/soft_Q.pth')
         self.soft_actor.save(self.folder + '/models/soft_actor.pth')
 
-    def load(self):
+    def load(self, folder=None):
+        if folder is None:
+            folder = self.folder
         try:
-            self.value_net.load(self.folder + '/models/value.pth', self.device)
-            self.target_value_net.load(self.folder + '/models/value_target.pth', self.device)
-            self.soft_Q_net1.load(self.folder + '/models/soft_Q.pth', self.device)
-            self.soft_Q_net2.load(self.folder + '/models/soft_Q.pth', self.device)
-            self.soft_actor.load(self.folder + '/models/soft_actor.pth', self.device)
+            self.value_net.load(folder + '/models/value.pth', self.device)
+            self.target_value_net.load(folder + '/models/value_target.pth', self.device)
+            self.soft_Q_net1.load(folder + '/models/soft_Q.pth', self.device)
+            self.soft_Q_net2.load(folder + '/models/soft_Q.pth', self.device)
+            self.soft_actor.load(folder + '/models/soft_actor.pth', self.device)
         except FileNotFoundError:
             raise Exception("No model has been saved !") from None
 
